@@ -71,6 +71,7 @@ function drainEvents(r) {
       burst(p.x, p.y, 20, ['#dff2ff', '#9fd0ee', '#ffffff'], 210, 5);
       sfx.splash();
     } else if (e.type === 'haul') {
+      (r.tonightHauls ??= []).push({ mi: e.mi, kg: e.kg, coins: e.coins });
       const p = lastFightPos || lurePos(r);
       burst(p.x, p.y - 10, 22, ['#ffd94d', '#ffb52e', '#fff2b0'], 240, 5);
       sfx.coin();
@@ -91,7 +92,14 @@ function drainEvents(r) {
       sfx.charm();
     } else if (e.type === 'snap') { sfx.snap(); view.shake = 9; }
     else if (e.type === 'escape') sfx.escape();
-    else if (e.type === 'night') sfx.night();
+    else if (e.type === 'night') {
+      // the night that just ended becomes the draft's recap; the panels
+      // start a fresh tally, and the route remembers which sea it was
+      r.lastNightHauls = r.tonightHauls || [];
+      r.tonightHauls = [];
+      (r.nightSeas ??= []).push(r.sea);
+      sfx.night();
+    }
     else if (e.type === 'end') {
       best = betterBest(best, r);
       saveJson('krakenwake-best', best);
@@ -122,6 +130,7 @@ function startRun(seed) {
   run = createRun(seed);
   run.screen = 'game';
   run.difficulty = difficultySel;
+  run.tonightHauls = []; run.lastNightHauls = []; run.nightSeas = [];
   view.toast = null;
   view.toastT = 0;
   view.particles = [];

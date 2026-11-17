@@ -5,6 +5,7 @@ import { MONSTERS, WEATHERS } from './data.js';
 import { drawFishShape } from './shapes.js';
 import { drawKraken } from './shapes2.js';
 import { drawDressing, drawWeatherFx } from './dressing.js';
+import { drawSkyExtras, drawWaterLife, drawSurfaceDressing, drawDockDetail, drawFightFx } from './scenery.js';
 
 export const WATER_Y = 430;
 const DOCK_X = 168;
@@ -244,14 +245,21 @@ function drawMonster(ctx, run, t) {
   }
 }
 
-export function drawWorld(ctx, run, view) {
+export function drawWorld(ctx, run, view, lite = false) {
   const t = view.t;
   drawSky(ctx, run, t);
+  if (!lite) drawSkyExtras(ctx, run, t);
   drawWater(ctx, run, t);
   drawDressing(ctx, run, t);
   drawWeatherFx(ctx, run, t);
+  if (!lite) {
+    drawWaterLife(ctx, run, t);
+    drawSurfaceDressing(ctx, run, t);
+  }
   drawMonster(ctx, run, t);
+  if (!lite) drawFightFx(ctx, run, t);
   drawDockAndHunter(ctx, run);
+  if (!lite) drawDockDetail(ctx, run, t);
   drawCable(ctx, run, t);
   // a lone tentacle drifting through the deep seas, pure menace
   if (run.sea >= 1 && run.phase !== 'fight') {

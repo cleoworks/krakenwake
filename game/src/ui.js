@@ -6,6 +6,7 @@ import { MONSTERS, SEAS, WEATHERS, BOONS, SEASON_NIGHTS, NIGHT_SECONDS } from '.
 import { journalCount } from './state.js';
 import { staminaWord, snapPoint } from './fishing.js';
 import { lurePos, WATER_Y } from './render.js';
+import { drawHuntPanels } from './panels.js';
 
 const F = (px, w = 700) => `${w} ${px}px system-ui, 'Segoe UI', sans-serif`;
 export function rr(ctx, x, y, w, h, r) {
@@ -164,6 +165,7 @@ export function drawHUD(ctx, run, view) {
     text(ctx, 'HOLD SPACE to charge your throw', 640, 640, 24, '#8fb8d4', 'center');
   }
   text(ctx, 'SPACE hold/release: throw • strike • reel    S: Camp (shop + bestiary)    R: restart', 640, 706, 19, '#7fa6c4', 'center', 400);
+  drawHuntPanels(ctx, run, view);
 }
 
 export function drawToast(ctx, view) {

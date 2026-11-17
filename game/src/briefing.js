@@ -6,6 +6,8 @@
 import { MONSTERS, SEAS, DIFFICULTIES } from './data.js';
 import { text, panel, rr } from './ui.js';
 import { drawWorld } from './render.js';
+import { drawFishShape } from './shapes.js';
+import { drawKraken } from './shapes2.js';
 
 export function briefingLayout() {
   const diffs = DIFFICULTIES.map((d, i) => ({ idx: i, x: 40 + i * 410, y: 474, w: 380, h: 56 }));
@@ -38,7 +40,7 @@ function drawDemoWindow(ctx, demo, view) {
   ctx.clip();
   ctx.translate(x, y - 16);
   ctx.scale(w / 1280, w / 1280);
-  drawWorld(ctx, demo, view);
+  drawWorld(ctx, demo, view, true); // lite: at this size the fine scenery is mush
   ctx.restore();
   ctx.strokeStyle = 'rgba(150,210,245,0.5)';
   ctx.lineWidth = 2;
@@ -89,15 +91,26 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
     c.fill();
   });
 
-  // the roster: every threat, named, grouped by its sea
+  // the roster: every threat, named and pictured, grouped by its sea
   panel(ctx, 40, 362, 1200, 76, 0.8);
   text(ctx, "THE SEAS' THREATS", 60, 386, 15, '#8fb8d4', 'left', 800);
   SEAS.forEach((sea, si) => {
-    const names = MONSTERS.filter((m) => m.sea === si).map((m) => m.name.toUpperCase()).join(' • ');
-    text(ctx, `${sea.name}: `, 240, 386 + si * 19, 14.5, '#ffd94d', 'left', 700);
-    const w = ctx.measureText(`${sea.name}: `).width;
-    const kraken = si === 2;
-    text(ctx, names, 240 + w, 386 + si * 19, 14.5, kraken ? '#ff8a7a' : '#cfe8ff', 'left', 400);
+    const y = 386 + si * 19;
+    text(ctx, `${sea.name}: `, 240, y, 14.5, '#ffd94d', 'left', 700);
+    let x = 240 + ctx.measureText(`${sea.name}: `).width + 2;
+    const list = MONSTERS.filter((m) => m.sea === si);
+    list.forEach((m, mi) => {
+      if (m.shape === 'kraken') drawKraken(ctx, x + 10, y - 3, 9, 1.35);
+      else drawFishShape(ctx, m.shape, x + 10, y - 4, 9, m.color, '#0b1420');
+      x += 24;
+      const nm = m.name.toUpperCase();
+      text(ctx, nm, x, y, 14.5, si === 2 ? '#ff8a7a' : '#cfe8ff', 'left', 400);
+      x += ctx.measureText(nm).width;
+      if (mi < list.length - 1) {
+        text(ctx, ' • ', x, y, 14.5, '#5f7d99', 'left', 400);
+        x += ctx.measureText(' • ').width;
+      }
+    });
   });
 
   text(ctx, 'DIFFICULTY', 40, 464, 18, '#8fb8d4', 'left', 800);

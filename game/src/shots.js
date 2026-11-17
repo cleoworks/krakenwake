@@ -21,10 +21,16 @@ export function stageShot(name, view, burst) {
     r.night = 5; r.weatherIdx = 3; r.sea = 2; r.seasOpen = [true, true, true];
     r.coins = 1240; r.combo = 6; r.bestCombo = 6; r.throws = 34; r.hauled = 30;
     r.score = 5310; r.boons = ['cable', 'winch'];
+    r.tonightHauls = [
+      { mi: 8, kg: 38.6, coins: 412 }, { mi: 11, kg: 17.9, coins: 286 },
+      { mi: 7, kg: 15.2, coins: 190 }, { mi: 10, kg: 28.4, coins: 244 },
+      { mi: 9, kg: 10.9, coins: 171 },
+    ];
+    r.nightStats = { hauls: 5, snaps: 1, coins: 1303, score: 1490 };
     markCaught(r, CAUGHT_9);
     r.phase = 'fight';
     r.castDist = 62;
-    r.fight = { mi: 12, kg: 58, dist: 62, tension: 63, t: 2.2, snapT: 0, surgePhase: 1, stamina: 48 };
+    r.fight = { mi: 12, kg: 58, dist: 62, tension: 63, t: 1.2, snapT: 0, surgePhase: 0, stamina: 48 };
     burst(800, 436, 16, ['#dff2ff', '#9fd0ee', '#ffffff'], 170, 5);
     return { r, mode: 'game' };
   }
@@ -43,6 +49,13 @@ export function stageShot(name, view, burst) {
     r.coins = 760; r.score = 3950; r.throws = 26; r.hauled = 22;
     r.boons = ['cable', 'winch'];
     r.nightGrades = ['S', 'A', 'S'];
+    r.nightSeas = [0, 0, 1];
+    r.tonightHauls = [];
+    r.lastNightHauls = [
+      { mi: 0, kg: 4.1, coins: 41 }, { mi: 2, kg: 8.4, coins: 76 },
+      { mi: 5, kg: 6.8, coins: 82 }, { mi: 1, kg: 6.2, coins: 49 },
+      { mi: 6, kg: 19.4, coins: 148 }, { mi: 4, kg: 9.1, coins: 88 },
+    ];
     r.draft = { choices: ['grip', 'glow', 'sails'], afterNight: 3 };
     markCaught(r, CAUGHT_9);
     return { r, mode: 'draft' };

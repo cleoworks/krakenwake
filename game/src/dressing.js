@@ -12,7 +12,7 @@ export function drawWeatherFx(ctx, run, t) {
   const wname = WEATHERS[run.weatherIdx].name;
   // deterministic sparkle noise on the water
   ctx.fillStyle = '#cfe8ff';
-  for (let i = 0; i < 110; i++) {
+  for (let i = 0; i < 72; i++) {
     const x = hash(i, 1) * 1280;
     const y = WATER_Y + 14 + hash(i, 2) * 250;
     ctx.globalAlpha = 0.04 + 0.13 * Math.abs(Math.sin(t * 1.3 + i * 1.7));
