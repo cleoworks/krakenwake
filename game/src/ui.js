@@ -1,7 +1,7 @@
 // ui.js — one job: the shared drawing kit (type, panels), the HUD, the
 // toast, and the sea-route strip every meta screen reuses. Type is big
 // and bold on purpose: the judge reads these screens shrunk.
-import { MONSTERS, SEAS, WEATHERS, BOONS, SEASON_NIGHTS, NIGHT_SECONDS } from './data.js';
+import { MONSTERS, SEAS, WEATHERS, BOONS, SEASON_NIGHTS, NIGHT_SECONDS, DIFFICULTIES } from './data.js';
 import { journalCount } from './state.js';
 import { staminaWord, snapPoint } from './fight.js';
 import { lurePos, WATER_Y } from './render.js';
@@ -83,35 +83,47 @@ function drawBoonPips(ctx, run, x, y, withLabel = true) {
 }
 
 export function drawHUD(ctx, run, view) {
-  panel(ctx, 16, 14, 1248, 64, 0.78);
-  text(ctx, `🪙 ${run.coins}`, 36, 58, 30, '#ffd94d');
+  // ONE compact panel at the top-left corner holds the run's vitals —
+  // coin, combo, score, night, level, bestiary in a two-column grid.
+  // The rest of the top edge is open sky: goal and location ride as
+  // small chips on the same row, and nothing spans the frame.
+  panel(ctx, 16, 14, 296, 102, 0.78);
+  text(ctx, `🪙 ${run.coins}`, 32, 48, 23, '#ffd94d');
   const comboScale = view.comboPop > 0 ? 1 + 0.45 * view.comboPop : 1;
   ctx.save();
-  ctx.translate(216, 58);
+  ctx.translate(180, 48);
   ctx.scale(comboScale, comboScale);
-  ctx.translate(-216, -58);
-  text(ctx, `COMBO ×${run.combo}`, 216, 58, 26, run.combo >= 3 ? '#ffb52e' : '#cfe8ff');
+  ctx.translate(-180, -48);
+  text(ctx, `COMBO ×${run.combo}`, 180, 48, 17, run.combo >= 3 ? '#ffb52e' : '#cfe8ff');
   ctx.restore();
-  text(ctx, `NIGHT ${run.night}/${SEASON_NIGHTS}`, 452, 58, 26, '#ffffff');
+  // one grid cell: small caps label, then the value beside it; returns
+  // the x where the value's ink ends (the night cell hangs its timer
+  // pill off it)
+  const cell = (x, y, label, value, color) => {
+    text(ctx, label, x, y, 11, '#8fb8d4', 'left', 800);
+    const vx = x + ctx.measureText(label).width + 7;
+    text(ctx, value, vx, y, 19, color);
+    return vx + ctx.measureText(value).width;
+  };
+  cell(32, 78, 'SCORE', `${run.score}`, '#ffe9a8');
+  const nightEnd = cell(180, 78, 'NIGHT', `${run.night}/${SEASON_NIGHTS}`, '#ffffff');
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  rr(ctx, 640, 34, 92, 16, 8);
+  rr(ctx, nightEnd + 7, 70, 30, 9, 4);
   ctx.fill();
   ctx.fillStyle = '#7fd4ff';
-  rr(ctx, 640, 34, 92 * Math.max(0, 1 - run.nightT / NIGHT_SECONDS), 16, 8);
+  rr(ctx, nightEnd + 7, 70, 30 * Math.max(0, 1 - run.nightT / NIGHT_SECONDS), 9, 4);
   ctx.fill();
-  text(ctx, `SCORE ${run.score}`, 752, 58, 23, '#ffe9a8');
-  text(ctx, `BESTIARY ${journalCount(run)}/13`, 1248, 58, 24, '#ffe9a8', 'right');
-  // goal + location as compact chips sized to their text — the
-  // row between them stays open sky; nothing spans the frame
+  cell(32, 106, 'LEVEL', DIFFICULTIES[run.difficulty].name, '#ffd94d');
+  cell(180, 106, 'BESTIARY', `${journalCount(run)}/13`, '#ffe9a8');
   const goalStr = `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`;
   ctx.font = F(20);
-  panel(ctx, 16, 88, ctx.measureText(goalStr).width + 32, 36, 0.66);
-  text(ctx, goalStr, 32, 112, 20, '#ffe9a8');
+  panel(ctx, 328, 14, ctx.measureText(goalStr).width + 32, 36, 0.66);
+  text(ctx, goalStr, 344, 38, 20, '#ffe9a8');
   const locStr = `${SEAS[run.sea].name} • ${WEATHERS[run.weatherIdx].name}`;
   const locW = ctx.measureText(locStr).width + 32;
-  panel(ctx, 1264 - locW, 88, locW, 36, 0.66);
-  text(ctx, locStr, 1248, 112, 20, '#aee6ff', 'right');
-  drawBoonPips(ctx, run, 32, 134);
+  panel(ctx, 1264 - locW, 14, locW, 36, 0.66);
+  text(ctx, locStr, 1248, 38, 20, '#aee6ff', 'right');
+  drawBoonPips(ctx, run, 32, 126);
 
   if (run.phase === 'charge') {
     text(ctx, 'RELEASE TO THROW!', 640, 586, 32, '#ffffff', 'center');
