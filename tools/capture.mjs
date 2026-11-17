@@ -31,8 +31,8 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 
 const SHOTS = [
   ['cover', '1-cover.png'],
-  ['bite', '2-bite.png'],
-  ['journal', '3-journal.png'],
+  ['briefing', '2-briefing.png'],
+  ['draft', '3-draft.png'],
   ['victory', '4-victory.png'],
 ];
 let failed = false;

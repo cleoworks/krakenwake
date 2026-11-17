@@ -2,7 +2,9 @@
 // lure and whatever is on the cable, weather mood, particles, the red edge
 // vignette when the cable is about to pop. HUD and screens live in ui.js.
 import { MONSTERS, WEATHERS } from './data.js';
-import { drawFishShape, drawKraken } from './shapes.js';
+import { drawFishShape } from './shapes.js';
+import { drawKraken } from './shapes2.js';
+import { drawDressing, drawWeatherFx } from './dressing.js';
 
 export const WATER_Y = 430;
 const DOCK_X = 168;
@@ -53,11 +55,17 @@ function drawSky(ctx, run, t) {
   ctx.arc(1070, 80, 9, 0, 6.29);
   ctx.arc(1102, 108, 6, 0, 6.29);
   ctx.fill();
-  // far hills
+  // far hills, then a nearer parallax ridge rolling the other way
   ctx.fillStyle = '#0a1522';
   ctx.beginPath();
   ctx.moveTo(0, WATER_Y);
   for (let x = 0; x <= 1280; x += 80) ctx.lineTo(x, WATER_Y - 46 - 26 * Math.sin(x * 0.004 + 2));
+  ctx.lineTo(1280, WATER_Y);
+  ctx.fill();
+  ctx.fillStyle = '#060d18';
+  ctx.beginPath();
+  ctx.moveTo(0, WATER_Y);
+  for (let x = 0; x <= 1280; x += 64) ctx.lineTo(x, WATER_Y - 14 - 15 * Math.sin(x * 0.006 + 5 + t * 0.05));
   ctx.lineTo(1280, WATER_Y);
   ctx.fill();
 }
@@ -81,17 +89,26 @@ function drawWater(ctx, run, t) {
     }
     ctx.stroke();
   }
-  // the moon-glint column, sliding slowly on the swell
+  // the moon-glint column, sliding slowly on the swell — red in the Maw
+  // even under a plain moon; her water remembers.
   const gx = 1085 + Math.sin(t * 0.4) * 22;
-  ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : 'rgba(200,225,245,0.16)';
+  ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : run.sea === 2 ? 'rgba(232,90,70,0.13)' : 'rgba(200,225,245,0.16)';
   for (let i = 0; i < 16; i++) {
     const y = WATER_Y + 12 + i * 17;
     const w = 14 + 26 * Math.abs(Math.sin(i * 1.7 + t * 0.9));
     ctx.fillRect(gx - w / 2 + Math.sin(i * 2.3 + t) * 7, y, w, 3);
   }
-  if (WEATHERS[run.weatherIdx].name === 'Fog') {
-    ctx.fillStyle = 'rgba(190,205,220,0.10)';
-    ctx.fillRect(0, WATER_Y - 60, 1280, 130);
+  // a second, finer swell layer close to the viewer
+  ctx.strokeStyle = 'rgba(160,210,240,0.07)';
+  ctx.lineWidth = 1.4;
+  for (let row = 0; row < 3; row++) {
+    const y = WATER_Y + 190 + row * 34;
+    ctx.beginPath();
+    for (let x = 0; x <= 1280; x += 24) {
+      const yy = y + Math.sin(x * 0.02 + t * 1.1 + row * 3) * 2.4;
+      x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+    }
+    ctx.stroke();
   }
   if (WEATHERS[run.weatherIdx].name === 'Gale') {
     ctx.strokeStyle = 'rgba(200,225,245,0.18)';
@@ -231,6 +248,8 @@ export function drawWorld(ctx, run, view) {
   const t = view.t;
   drawSky(ctx, run, t);
   drawWater(ctx, run, t);
+  drawDressing(ctx, run, t);
+  drawWeatherFx(ctx, run, t);
   drawMonster(ctx, run, t);
   drawDockAndHunter(ctx, run);
   drawCable(ctx, run, t);

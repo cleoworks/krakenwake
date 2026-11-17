@@ -1,12 +1,20 @@
 // fishing.js — one job: the rules of the hunt, as pure logic. createRun lives
 // in state.js; step() advances a run by dt given {hold, pressed, released}.
 // No DOM, no canvas, no audio: Node imports this file for the seeded proof.
-import { MONSTERS, SEAS, HARPOONS, LURES, WEATHERS, NIGHT_SECONDS, SEASON_NIGHTS, poolFor } from './data.js';
+import { MONSTERS, HARPOONS, LURES, WEATHERS, DIFFICULTIES, NIGHT_SECONDS, SEASON_NIGHTS, poolFor } from './data.js';
 import { journalCount } from './state.js';
+import { hasBoon, makeDraftChoices, nightGrade } from './salvage.js';
 
 const ev = (run, type, data = {}) => run.events.push({ type, ...data });
 
+export function earnFeat(run, id) {
+  if (run.feats[id]) return;
+  run.feats[id] = true;
+  ev(run, 'feat', { id });
+}
+
 function finish(run, result) {
+  if (result === 'victory') earnFeat(run, 'full');
   run.result = result;
   run.screen = 'end';
   run.phase = 'idle';
@@ -15,15 +23,28 @@ function finish(run, result) {
   ev(run, 'end', { result });
 }
 
+// The night that just ended is graded and its feats settled; then, unless
+// the season is over, the salvage draft opens before the next night.
 function endNight(run) {
+  const ns = run.nightStats;
+  run.nightGrades.push(nightGrade(ns));
+  if (ns.hauls > 0 && ns.snaps === 0) earnFeat(run, 'untouched');
+  if (ns.coins >= 2000) earnFeat(run, 'rich');
+  const wname = WEATHERS[run.weatherIdx].name;
+  if (wname === 'Gale' || wname === 'Blood Moon') earnFeat(run, 'storm');
   if (run.night >= SEASON_NIGHTS) return finish(run, 'over');
   run.night += 1;
   run.nightT = 0;
   run.weatherIdx = run.rng.int(0, WEATHERS.length - 1);
+  run.nightStats = { hauls: 0, snaps: 0, coins: 0, score: 0 };
+  run.charmReady = true;
   run.phase = 'idle';
   run.wait = null;
   run.fight = null;
+  run.draft = { choices: makeDraftChoices(run), afterNight: run.night - 1 };
+  run.screen = 'draft';
   ev(run, 'night', { night: run.night });
+  ev(run, 'draft', { afterNight: run.draft.afterNight });
 }
 
 // Which monster answers the lure: this sea's pool, the Kraken only when the
@@ -31,12 +52,14 @@ function endNight(run) {
 function pickMonster(run) {
   const lure = LURES[run.lure];
   const odds = WEATHERS[run.weatherIdx].odds;
+  const glow = hasBoon(run, 'glow');
   const pool = poolFor(run.sea).filter((i) => !MONSTERS[i].doom || lure.doom);
   let total = 0;
   const weights = pool.map((i) => {
     let w = MONSTERS[i].weight;
     if (run.bestiary[i].count === 0) w *= 2.0;
     if (MONSTERS[i].weight <= 13) w *= odds;
+    if (glow && MONSTERS[i].weight <= 13) w *= 1.6; // Glow Bait: rares answer
     total += w;
     return w;
   });
@@ -51,7 +74,11 @@ function pickMonster(run) {
 function startWait(run) {
   const lure = LURES[run.lure];
   const weather = WEATHERS[run.weatherIdx];
-  const biteIn = run.rng.range(1.6, 4.2) * lure.bite * weather.bite;
+  // Storm Sails halves a weather penalty (a bite factor above 1); Blood
+  // Chum shaves a fifth off every wait.
+  let wBite = weather.bite;
+  if (hasBoon(run, 'sails') && wBite > 1) wBite = 1 + (wBite - 1) / 2;
+  const biteIn = run.rng.range(1.6, 4.2) * lure.bite * wBite * (hasBoon(run, 'chum') ? 0.8 : 1);
   const fakes = [];
   if (run.rng.chance(0.35) && biteIn > 1.4) fakes.push(run.rng.range(0.5, biteIn - 0.8));
   if (run.rng.chance(0.15) && biteIn > 2.2) fakes.push(run.rng.range(0.4, biteIn - 1.0));
@@ -62,8 +89,10 @@ function startWait(run) {
 function startFight(run) {
   const mi = pickMonster(run);
   const m = MONSTERS[mi];
-  const kg = m.kgMin + Math.pow(run.rng.next(), 1.25) * (m.kgMax - m.kgMin);
-  run.fight = { mi, kg, dist: run.castDist, tension: 12, t: 0, snapT: 0, surgePhase: run.rng.range(0, 6.28) };
+  // Heavy Sinkers flatten the weight roll: heavier specimens take the lure.
+  const roll = hasBoon(run, 'sinkers') ? Math.pow(run.rng.next(), 0.85) : Math.pow(run.rng.next(), 1.25);
+  const kg = m.kgMin + roll * (m.kgMax - m.kgMin);
+  run.fight = { mi, kg, dist: run.castDist, tension: 12, t: 0, snapT: 0, surgePhase: run.rng.range(0, 6.28), stamina: 100 };
   run.wait = null;
   run.phase = 'fight';
   ev(run, 'strike', { mi });
@@ -73,9 +102,16 @@ function startFight(run) {
 function haul(run) {
   const f = run.fight;
   const m = MONSTERS[f.mi];
-  const gained = Math.round((6 + f.kg * m.vpk) * (1 + 0.1 * run.combo));
+  const comboMult = 1 + 0.1 * run.combo;
+  const gained = Math.round((6 + f.kg * m.vpk) * comboMult);
+  // SCORE is its own currency: haul value x combo x difficulty.
+  const scoreGain = Math.round((6 + f.kg * m.vpk) * comboMult * DIFFICULTIES[run.difficulty].mult);
   run.coins += gained;
   run.coinsEarned += gained;
+  run.score += scoreGain;
+  run.nightStats.hauls += 1;
+  run.nightStats.coins += gained;
+  run.nightStats.score += scoreGain;
   run.combo += 1;
   run.bestCombo = Math.max(run.bestCombo, run.combo);
   run.hauled += 1;
@@ -86,7 +122,11 @@ function haul(run) {
     run.biggestKg = f.kg;
     run.biggestName = m.name;
   }
-  ev(run, 'haul', { mi: f.mi, kg: f.kg, coins: gained });
+  earnFeat(run, 'first');
+  if (f.kg >= 50) earnFeat(run, 'heavy');
+  if (f.mi === 12) earnFeat(run, 'kraken');
+  if (run.bestCombo >= 8) earnFeat(run, 'combo8');
+  ev(run, 'haul', { mi: f.mi, kg: f.kg, coins: gained, score: scoreGain });
   run.fight = null;
   run.phase = 'idle';
   if (journalCount(run) >= 13) finish(run, 'victory');
@@ -108,7 +148,7 @@ function stepWait(run, dt, input) {
   }
   if (!w.open && w.t >= w.biteIn) {
     w.open = true;
-    w.window = 0.5;
+    w.window = hasBoon(run, 'aperture') ? 0.75 : 0.5; // Wide Aperture
     ev(run, 'bite');
   }
   if (w.open) {
@@ -122,30 +162,54 @@ function stepWait(run, dt, input) {
   }
 }
 
+// The fight, with stamina: a FRESH monster pulls at full strength and reels
+// in slowly. Holding the cable in the yellow/red drains it; thrashing drains
+// it too. Slacken and it breathes again (slower with Iron Grip, faster on
+// LEVIATHAN). A SPENT monster comes in fast and pulls weak.
+export const staminaWord = (s) => (s > 70 ? 'FRESH' : s > 40 ? 'WINDING' : s > 15 ? 'TIRING' : 'SPENT');
+export const snapPoint = (run) => (hasBoon(run, 'cable') ? 106 : 100);
+
 function stepFight(run, dt, input) {
   const f = run.fight;
   const m = MONSTERS[f.mi];
   const gear = HARPOONS[run.harpoon];
+  const diff = DIFFICULTIES[run.difficulty];
   f.t += dt;
   const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
-  const load = m.power * (0.35 + 0.65 * Math.max(0, surge01));
+  const st = f.stamina / 100;
+  const load = m.power * diff.power * (0.35 + 0.65 * Math.max(0, surge01)) * (0.85 + 0.3 * st);
   if (input.hold) {
     f.tension += (load * 2.05 - gear.control * 1.55) * dt;
-    f.dist -= gear.reel * Math.max(0.35, 1.12 - f.tension / 160) * dt;
+    const reelRate = gear.reel * (hasBoon(run, 'winch') ? 1.25 : 1);
+    f.dist -= reelRate * Math.max(0.35, 1.12 - f.tension / 160) * (0.68 + 0.32 * (1 - st)) * dt;
+    if (f.tension >= 50) f.stamina -= (8 + (f.tension - 50) * 0.28) * dt;
   } else {
     f.tension -= 46 * dt;
     f.dist += (2 + m.power * 0.05) * dt;
+    f.stamina += 8 * diff.regen * (hasBoon(run, 'grip') ? 0.5 : 1) * dt;
   }
-  f.tension = Math.min(105, Math.max(0, f.tension));
+  if (surge01 > 0.7) f.stamina -= 4 * dt; // thrashing tires it either way
+  f.stamina = Math.min(100, Math.max(0, f.stamina));
+  const snapAt = snapPoint(run);
+  f.tension = Math.min(snapAt + 5, Math.max(0, f.tension));
   run.peakTension = Math.max(run.peakTension, Math.min(100, f.tension));
-  if (f.tension >= 100) {
+  if (f.tension >= snapAt) {
     f.snapT += dt;
     if (f.snapT > 0.7) {
-      run.combo = 0;
-      run.fight = null;
-      run.phase = 'idle';
-      ev(run, 'snap', { mi: f.mi });
-      return;
+      if (hasBoon(run, 'charm') && run.charmReady) {
+        // the charm takes the snap: combo survives, the fight goes on
+        run.charmReady = false;
+        f.tension = 55;
+        f.snapT = 0;
+        ev(run, 'charm', { mi: f.mi });
+      } else {
+        run.combo = 0;
+        run.nightStats.snaps += 1;
+        run.fight = null;
+        run.phase = 'idle';
+        ev(run, 'snap', { mi: f.mi });
+        return;
+      }
     }
   } else {
     f.snapT = Math.max(0, f.snapT - dt * 2);
@@ -190,35 +254,3 @@ export function step(run, dt, input = {}) {
   }
 }
 
-// --- camp actions (used by the camp screen clicks and by the bot) ---
-
-export function buyEquip(run, kind, idx) {
-  if (kind === 'harpoon') {
-    if (!run.ownedH[idx]) {
-      if (run.coins < HARPOONS[idx].price) return false;
-      run.coins -= HARPOONS[idx].price;
-      run.ownedH[idx] = true;
-    }
-    run.harpoon = idx;
-    return true;
-  }
-  if (kind === 'lure') {
-    if (!run.ownedL[idx]) {
-      if (run.coins < LURES[idx].price) return false;
-      run.coins -= LURES[idx].price;
-      run.ownedL[idx] = true;
-    }
-    run.lure = idx;
-    return true;
-  }
-  if (kind === 'sea') {
-    if (!run.seasOpen[idx]) {
-      if (run.coins < SEAS[idx].unlock) return false;
-      run.coins -= SEAS[idx].unlock;
-      run.seasOpen[idx] = true;
-    }
-    run.sea = idx;
-    return true;
-  }
-  return false;
-}

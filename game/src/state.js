@@ -34,17 +34,34 @@ export function createRun(seed) {
     fight: null,
     events: [],
     result: null, // 'victory' | 'over' once screen === 'end'
+    // --- v2 layers ---
+    difficulty: 0, // index into DIFFICULTIES; main.js sets it from the briefing
+    score: 0, // haul value x combo x difficulty, kept apart from coins
+    boons: [], // salvage-draft boon ids, in the order they were picked
+    draft: null, // { choices: [boonId x3], afterNight } while screen === 'draft'
+    nightStats: { hauls: 0, snaps: 0, coins: 0, score: 0 }, // reset every night
+    nightGrades: [], // one letter per completed night, for the sea route
+    feats: {}, // feat id -> true once earned
+    charmReady: true, // Sailor's Charm re-arms every night
   };
+}
+
+// Season grade from the final score: the medal on the end screen and in BEST.
+export function gradeForScore(score) {
+  if (score >= 8500) return 'S';
+  if (score >= 6000) return 'A';
+  if (score >= 3800) return 'B';
+  return 'C';
 }
 
 export const journalCount = (run) => run.bestiary.reduce((n, b) => n + (b.count > 0 ? 1 : 0), 0);
 
 export function emptyBest() {
-  return { result: '', species: 0, biggestKg: 0, biggestName: '', combo: 0, coins: 0 };
+  return { result: '', species: 0, biggestKg: 0, biggestName: '', combo: 0, coins: 0, score: 0, grade: '' };
 }
 
 // The better of two finished runs, for the BEST line: species count first,
-// then biggest haul, then combo, then coins earned.
+// then score, then biggest haul, then combo, then coins earned.
 export function betterBest(prev, run) {
   const mine = {
     result: run.result === 'victory' ? 'BESTIARY COMPLETE' : `${journalCount(run)}/13 species`,
@@ -53,10 +70,12 @@ export function betterBest(prev, run) {
     biggestName: run.biggestName,
     combo: run.bestCombo,
     coins: run.coinsEarned,
+    score: run.score,
+    grade: gradeForScore(run.score),
   };
   if (!prev || !prev.result) return mine;
-  const a = [mine.species, mine.biggestKg, mine.combo, mine.coins];
-  const b = [prev.species || 0, prev.biggestKg || 0, prev.combo || 0, prev.coins || 0];
+  const a = [mine.species, mine.score, mine.biggestKg, mine.combo, mine.coins];
+  const b = [prev.species || 0, prev.score || 0, prev.biggestKg || 0, prev.combo || 0, prev.coins || 0];
   for (let i = 0; i < a.length; i++) {
     if (a[i] > b[i]) return mine;
     if (a[i] < b[i]) return prev;

@@ -1,29 +1,41 @@
 // main.js — one job: conduct. Owns the canvas, the frame loop, the view
-// state (particles, shake, hit-stop, toast), the screens' flow, sound
-// triggers, the attract demo behind the title, and the staged ?shot= states
-// the screenshots are taken from. Rules live in fishing.js.
-import { MONSTERS } from './data.js';
-import { createRun, journalCount, emptyBest, betterBest } from './state.js';
-import { step, buyEquip } from './fishing.js';
-import { makeBot, botShop } from './bot.js';
+// state (particles, shake, hit-stop, toast), the screens' flow (briefing,
+// game, camp, draft, end), sound triggers, the attract demo inside the
+// briefing, and the staged ?shot= states the screenshots are taken from.
+// Rules live in fishing.js; the meta layer in salvage.js.
+import { MONSTERS, FEATS } from './data.js';
+import { createRun, journalCount, emptyBest, betterBest, gradeForScore } from './state.js';
+import { step } from './fishing.js';
+import { buyEquip, pickBoon } from './salvage.js';
+import { makeBot, botShop, botDraft } from './bot.js';
 import { makeInput } from './input.js';
 import { initAudio, sfx } from './audio.js';
 import { drawWorld, lurePos } from './render.js';
-import { drawHUD, drawTitle, drawCamp, drawEnd, drawToast, campLayout } from './ui.js';
+import { drawHUD, drawToast } from './ui.js';
+import { drawBriefing, briefingLayout } from './briefing.js';
+import { drawCamp, campLayout } from './camp.js';
+import { drawDraft, draftLayout } from './draft.js';
+import { drawEnd } from './end.js';
+import { stageShot } from './shots.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const input = makeInput(canvas);
 const view = { t: 0, particles: [], shake: 0, freeze: 0, toast: null, toastT: 0, comboPop: 0, creakT: 0 };
 
-let best = emptyBest();
-try {
-  const raw = localStorage.getItem('krakenwake-best');
-  if (raw) best = { ...emptyBest(), ...JSON.parse(raw) };
-} catch { /* private mode: play without a saved best */ }
-function saveBest() {
-  try { localStorage.setItem('krakenwake-best', JSON.stringify(best)); } catch { /* ignore */ }
+function loadJson(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
 }
+function saveJson(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* private mode */ }
+}
+let best = { ...emptyBest(), ...(loadJson('krakenwake-best') || {}) };
+if (!best.result) best = emptyBest();
+let last = loadJson('krakenwake-last');
+let difficultySel = loadJson('krakenwake-difficulty') ?? 0;
 
 let run = createRun((Math.random() * 1e9) | 0);
 run.screen = 'title';
@@ -64,14 +76,32 @@ function drainEvents(r) {
       sfx.coin();
       sfx.thud(e.kg);
       view.comboPop = 1;
-      view.toast = { title: `${MONSTERS[e.mi].name} — ${e.kg.toFixed(1)} kg`, sub: `+${e.coins} coins • combo ×${r.combo}` };
+      view.toast = { title: `${MONSTERS[e.mi].name} — ${e.kg.toFixed(1)} kg`, sub: `+${e.coins} coins • +${e.score} score • combo ×${r.combo}` };
       view.toastT = 2.2;
+    } else if (e.type === 'feat') {
+      const f = FEATS.find((ff) => ff.id === e.id);
+      if (f) {
+        view.toast = { title: `★ FEAT — ${f.name}`, sub: f.desc };
+        view.toastT = 2.2;
+        sfx.feat();
+      }
+    } else if (e.type === 'charm') {
+      view.toast = { title: "Sailor's Charm!", sub: 'The cable parts — but the combo survives.' };
+      view.toastT = 2.2;
+      sfx.charm();
     } else if (e.type === 'snap') { sfx.snap(); view.shake = 9; }
     else if (e.type === 'escape') sfx.escape();
     else if (e.type === 'night') sfx.night();
     else if (e.type === 'end') {
       best = betterBest(best, r);
-      saveBest();
+      saveJson('krakenwake-best', best);
+      last = {
+        result: r.result === 'victory' ? 'BESTIARY COMPLETE' : `${journalCount(r)}/13 species`,
+        species: journalCount(r),
+        score: r.score,
+        grade: gradeForScore(r.score),
+      };
+      saveJson('krakenwake-last', last);
       if (e.result === 'victory') sfx.win();
     }
   }
@@ -91,6 +121,7 @@ function stepParticles(dt) {
 function startRun(seed) {
   run = createRun(seed);
   run.screen = 'game';
+  run.difficulty = difficultySel;
   view.toast = null;
   view.toastT = 0;
   view.particles = [];
@@ -112,60 +143,11 @@ function handleCampClicks() {
   }
 }
 
-// --- staged states for the screenshots (?shot=NAME&seed=1) ------------------
-function markCaught(r, list) {
-  list.forEach(([i, count, kg]) => {
-    r.bestiary[i].count = count;
-    r.bestiary[i].bestKg = kg;
-  });
-}
-function stageShot(name) {
-  const r = createRun(1);
-  r.screen = 'game';
-  view.t = 1.35;
-  if (name === 'cover') {
-    r.night = 5; r.weatherIdx = 3; r.sea = 2; r.seasOpen = [true, true, true];
-    r.coins = 1240; r.combo = 6; r.bestCombo = 6; r.throws = 34; r.hauled = 30;
-    markCaught(r, [[0, 6, 4.1], [1, 4, 6.2], [2, 5, 8.4], [3, 1, 33.0], [4, 5, 9.1], [5, 3, 6.8], [6, 2, 19.4], [7, 5, 15.2], [8, 3, 38.6]]);
-    r.phase = 'fight';
-    r.castDist = 62;
-    r.fight = { mi: 12, kg: 58, dist: 62, tension: 63, t: 2.2, snapT: 0, surgePhase: 1 };
-    burst(800, 436, 16, ['#dff2ff', '#9fd0ee', '#ffffff'], 170, 5);
-    return { r, mode: 'game' };
-  }
-  if (name === 'bite') {
-    r.night = 2; r.weatherIdx = 1; r.sea = 1; r.seasOpen = [true, true, false];
-    r.coins = 145; r.combo = 2; r.bestCombo = 2;
-    markCaught(r, [[0, 3, 3.4], [1, 2, 5.0], [3, 1, 24.0]]);
-    r.phase = 'wait';
-    r.castDist = 58;
-    r.wait = { t: 2, biteIn: 2, open: true, window: 0.4, telegraph: true, fakes: [], dip: 0.2 };
-    return { r, mode: 'game' };
-  }
-  if (name === 'journal') {
-    r.screen = 'camp';
-    r.coins = 385; r.sea = 1; r.seasOpen = [true, true, false];
-    r.harpoon = 1; r.ownedH = [true, true, false];
-    r.lure = 2; r.ownedL = [true, true, true, false];
-    markCaught(r, [[0, 6, 4.1], [1, 4, 6.2], [2, 5, 8.4], [3, 1, 33.0], [4, 5, 9.1], [5, 3, 6.8], [6, 2, 19.4]]);
-    return { r, mode: 'camp' };
-  }
-  // victory
-  r.screen = 'end';
-  r.result = 'victory';
-  r.night = 6; r.weatherIdx = 1; r.sea = 2;
-  r.coins = 860; r.coinsEarned = 4210; r.bestCombo = 11; r.peakTension = 96;
-  r.throws = 63; r.hauled = 47; r.biggestKg = 52.4; r.biggestName = 'Mother Kraken';
-  markCaught(r, [[0, 4, 4.4], [1, 3, 6.6], [2, 4, 8.8], [3, 5, 36.2], [4, 2, 9.4], [5, 3, 7.2], [6, 4, 21.0], [7, 5, 16.8], [8, 2, 41.3], [9, 3, 10.9], [10, 4, 30.5], [11, 6, 18.2], [12, 2, 52.4]]);
-  const shotBest = { result: 'BESTIARY COMPLETE', species: 13, biggestKg: 52.4, biggestName: 'Mother Kraken', combo: 11, coins: 4210 };
-  return { r, mode: 'end', bestOverride: shotBest };
-}
-
 const params = new URLSearchParams(location.search);
 const shot = params.get('shot');
 let shotState = null;
 if (shot) {
-  shotState = stageShot(shot);
+  shotState = stageShot(shot, view, burst);
   run = shotState.r;
 }
 
@@ -178,7 +160,10 @@ function frame(ts) {
 
   if (shotState) {
     ctx.clearRect(0, 0, 1280, 720);
-    if (shotState.mode === 'camp') drawCamp(ctx, run);
+    if (shotState.mode === 'briefing') {
+      drawWorld(ctx, shotState.demoShot, view);
+      drawBriefing(ctx, shotState.difficulty, shotState.bestOverride, shotState.lastOverride, shotState.demoShot, view);
+    } else if (shotState.mode === 'draft') { drawWorld(ctx, run, view); drawDraft(ctx, run, view); }
     else if (shotState.mode === 'end') { drawWorld(ctx, run, view); drawEnd(ctx, run, shotState.bestOverride); }
     else { drawWorld(ctx, run, view); drawHUD(ctx, run, view); }
     return;
@@ -191,14 +176,41 @@ function frame(ts) {
   if (view.shake < 0.05) view.shake = 0;
 
   if (run.screen === 'title') {
-    // the attract demo plays itself behind the title
+    // the attract demo hunts on its own behind the briefing — and in its
+    // little window — drafting and shopping like a real hunter
     if (demo.screen === 'end') demo = createRun(7);
+    if (demo.screen === 'draft') botDraft(demo);
     if (demo.phase === 'idle') botShop(demo);
     step(demo, dt, bot.input(demo));
     demo.events.length = 0;
     drawWorld(ctx, demo, view);
-    drawTitle(ctx, demo, view, best);
-    if (snap.pressed || snap.pressedKeys.has('Enter')) {
+    drawBriefing(ctx, difficultySel, best, last, demo, view);
+    let consumed = false;
+    for (const c of input.takeClicks()) {
+      const { diffs, sail } = briefingLayout();
+      for (const d of diffs) {
+        if (c.x >= d.x && c.x <= d.x + d.w && c.y >= d.y && c.y <= d.y + d.h) {
+          difficultySel = d.idx;
+          saveJson('krakenwake-difficulty', difficultySel);
+          sfx.click();
+          consumed = true;
+        }
+      }
+      if (c.x >= sail.x && c.x <= sail.x + sail.w && c.y >= sail.y && c.y <= sail.y + sail.h) {
+        initAudio();
+        startRun((Math.random() * 1e9) | 0);
+        return;
+      }
+    }
+    for (const k of ['Digit1', 'Digit2', 'Digit3']) {
+      if (snap.pressedKeys.has(k)) {
+        difficultySel = Number(k.slice(-1)) - 1;
+        saveJson('krakenwake-difficulty', difficultySel);
+        sfx.click();
+        consumed = true;
+      }
+    }
+    if (!consumed && (snap.pressed || snap.pressedKeys.has('Enter'))) {
       initAudio();
       startRun((Math.random() * 1e9) | 0);
     }
@@ -209,6 +221,25 @@ function frame(ts) {
     handleCampClicks();
     drawCamp(ctx, run);
     if (snap.pressedKeys.has('KeyS') || snap.pressedKeys.has('Escape')) run.screen = 'game';
+    return;
+  }
+
+  if (run.screen === 'draft') {
+    drawWorld(ctx, run, view);
+    drawDraft(ctx, run, view);
+    const { cards } = draftLayout();
+    for (const c of input.takeClicks()) {
+      cards.forEach((card, i) => {
+        if (c.x >= card.x && c.x <= card.x + card.w && c.y >= card.y && c.y <= card.y + card.h) {
+          if (pickBoon(run, run.draft.choices[i])) sfx.click();
+        }
+      });
+    }
+    ['Digit1', 'Digit2', 'Digit3'].forEach((k, i) => {
+      if (snap.pressedKeys.has(k) && run.draft && run.draft.choices[i]) {
+        if (pickBoon(run, run.draft.choices[i])) sfx.click();
+      }
+    });
     return;
   }
 

@@ -51,3 +51,40 @@ export const MONSTERS = [
 
 export const KRAKEN_INDEX = 12;
 export const poolFor = (sea) => MONSTERS.map((m, i) => i).filter((i) => MONSTERS[i].sea === sea);
+
+// Difficulty: chosen on the briefing screen. mult scales SCORE (never coins);
+// power scales how hard monsters pull; regen scales stamina recovery while
+// the cable is slack (Leviathan monsters catch their breath faster).
+export const DIFFICULTIES = [
+  { name: 'FISHERMAN', mult: 1.0, power: 1.0, regen: 1.0, blurb: 'A fair sea. Score ×1' },
+  { name: 'HARPOONEER', mult: 1.3, power: 1.15, regen: 1.0, blurb: 'Monsters fight harder. Score ×1.3' },
+  { name: 'LEVIATHAN', mult: 1.6, power: 1.35, regen: 1.5, blurb: 'Much harder fights, fast stamina regen. Score ×1.6' },
+];
+
+// The salvage draft pool: after each night (1-5) the hunter picks 1 of 3.
+// Every boon is a real run modifier read by fishing.js; they stack all season.
+export const BOONS = [
+  { id: 'cable', code: 'RC', name: 'Reinforced Cable', desc: 'The safe tension band widens — the cable holds deeper into the red.' },
+  { id: 'winch', code: 'BW', name: 'Brass Winch', desc: '+25% reel speed on every harpoon you own.' },
+  { id: 'chum', code: 'BC', name: 'Blood Chum', desc: 'Monsters find the lure 20% faster, every night.' },
+  { id: 'aperture', code: 'WA', name: 'Wide Aperture', desc: 'The strike window stays open 50% longer.' },
+  { id: 'charm', code: 'SC', name: "Sailor's Charm", desc: 'Once per night, a snapped cable does not break your combo.' },
+  { id: 'grip', code: 'IG', name: 'Iron Grip', desc: 'Monster stamina regens at half speed while you slacken.' },
+  { id: 'glow', code: 'GB', name: 'Glow Bait', desc: 'Rare monsters answer the lure far more often.' },
+  { id: 'sails', code: 'SS', name: 'Storm Sails', desc: 'Weather penalties on the bite are halved.' },
+  { id: 'sinkers', code: 'HS', name: 'Heavy Sinkers', desc: 'Heavier specimens take the lure — bigger hauls, bigger scores.' },
+];
+export const boonById = (id) => BOONS.find((b) => b.id === id);
+
+// Season feats: earned states are tracked on the run and shown on the end
+// screen, earned in gold, locked in grey.
+export const FEATS = [
+  { id: 'first', name: 'First Blood', desc: 'Haul your first monster' },
+  { id: 'untouched', name: 'Untouched Night', desc: 'Finish a night with no snapped cable' },
+  { id: 'kraken', name: 'Kraken Slayer', desc: 'Haul the Mother Kraken' },
+  { id: 'full', name: 'Full Bestiary', desc: 'Complete all 13 monsters' },
+  { id: 'combo8', name: 'Combo ×8', desc: 'Reach a combo of 8' },
+  { id: 'heavy', name: 'Heavy Haul', desc: 'Haul a monster of 50 kg or more' },
+  { id: 'rich', name: 'Rich Night', desc: 'Earn 2,000+ coins in one night' },
+  { id: 'storm', name: 'Storm Hunter', desc: 'Finish a night under Gale or Blood Moon' },
+];
