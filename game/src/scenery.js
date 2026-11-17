@@ -2,7 +2,7 @@
 // a busier sky, a third water texture, life under and on the surface, a
 // dressed dock, and the theatre around a fight. All placed from fixed
 // hashes plus the frame clock, so every screenshot agrees.
-import { staminaWord } from './fishing.js';
+import { staminaWord, calloutLines } from './fishing.js';
 import { MONSTERS } from './data.js';
 import { WATER_Y, lurePos } from './render.js';
 
@@ -38,7 +38,7 @@ function drawFoamAndSparkle(ctx, run, t) {
   ctx.strokeStyle = 'rgba(215,238,252,0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     const x = ((hash(i, 21) * 1340 - t * (9 + hash(i, 22) * 14)) % 1340 + 1340) % 1340 - 30;
     const y = WATER_Y + 18 + hash(i, 23) * 240;
     ctx.moveTo(x, y);
@@ -75,7 +75,7 @@ function drawSchool(ctx, t) {
   const gx = 700 + Math.sin(t * 0.11) * 190;
   const gy = 545 + Math.sin(t * 0.4) * 10;
   ctx.fillStyle = 'rgba(6,14,24,0.75)';
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 6; i++) {
     const fx = gx + (hash(i, 31) - 0.5) * 130;
     const fy = gy + (hash(i, 32) - 0.5) * 44 + Math.sin(t * 1.8 + i * 1.4) * 3;
     const s = 7 + hash(i, 33) * 4;
@@ -93,11 +93,11 @@ function drawJellies(ctx, t) {
   // two jellyfish keeping station in the Maw
   for (const [jx, jy, s, ph] of [[420, 585, 21, 0], [585, 628, 15, 2.2]]) {
     const bob = Math.sin(t * 0.8 + ph) * 6;
-    const g = ctx.createRadialGradient(jx, jy + bob, 2, jx, jy + bob, s * 2.1);
+    const g = ctx.createRadialGradient(jx, jy + bob, 2, jx, jy + bob, s * 1.5);
     g.addColorStop(0, 'rgba(150,120,255,0.28)');
     g.addColorStop(1, 'rgba(150,120,255,0)');
     ctx.fillStyle = g;
-    ctx.fillRect(jx - s * 2.1, jy + bob - s * 2.1, s * 4.2, s * 4.2);
+    ctx.fillRect(jx - s * 1.5, jy + bob - s * 1.5, s * 3, s * 3);
     ctx.fillStyle = 'rgba(196,178,255,0.5)';
     ctx.beginPath();
     ctx.arc(jx, jy + bob, s, 3.14, 6.29);
@@ -116,7 +116,7 @@ function drawJellies(ctx, t) {
 function drawSeaweed(ctx, t) {
   ctx.strokeStyle = 'rgba(16,44,30,0.8)';
   ctx.lineCap = 'round';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 4; i++) {
     const bx = 330 + i * 118 + hash(i, 41) * 40;
     const h = 44 + hash(i, 42) * 42;
     ctx.lineWidth = 5 - (i % 3);
@@ -281,14 +281,15 @@ export function drawFightFx(ctx, run, t) {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = wc;
   ctx.fillText(word, p.x, WATER_Y - 64);
-  // the surge, named when it comes
-  const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
-  if (surge01 > 0.78) {
+  // the surge, named when it comes — on its own line of the callout
+  // column, clear of the word below and of VITAL! (see calloutLines)
+  const lines = calloutLines(f);
+  if (lines.thrash) {
     ctx.save();
     ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 10);
     ctx.font = "800 23px system-ui, 'Segoe UI', sans-serif";
     ctx.fillStyle = '#ff8a7a';
-    ctx.fillText('THRASHING!', p.x, WATER_Y - 98);
+    ctx.fillText('THRASHING!', p.x, WATER_Y - 64 - lines.thrash * 38);
     ctx.restore();
   }
 }

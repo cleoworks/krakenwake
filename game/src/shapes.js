@@ -152,9 +152,27 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
           ctx.stroke();
         }
       });
+      // the jaw: a separate mandible slung under the head, seamed dark
+      ctx.fillStyle = shade(color, 0.72);
+      ctx.beginPath();
+      ctx.moveTo(s * 1.06, s * 0.02); ctx.lineTo(s * 0.7, s * 0.36); ctx.lineTo(s * 0.28, s * 0.47);
+      ctx.lineTo(s * 0.55, s * 0.1); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(2,4,8,0.65)';
+      ctx.lineWidth = s * 0.045;
+      ctx.beginPath(); ctx.moveTo(s * 1.04, 0); ctx.lineTo(s * 0.32, s * 0.42); ctx.stroke();
+      K.marks(() => { // the ribbed throat: pleats under the jaw, bowed with the belly
+        ctx.strokeStyle = 'rgba(2,4,8,0.6)';
+        ctx.lineWidth = s * 0.04;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo((0.78 - i * 0.13) * s, (0.32 + i * 0.05) * s);
+          ctx.quadraticCurveTo((0.45 - i * 0.12) * s, (0.54 + i * 0.02) * s, (0.16 - i * 0.08) * s, (0.46 + i * 0.03) * s);
+          ctx.stroke();
+        }
+      });
       K.speckle(10, 0.1, 0.95, -0.5, -0.1, 'rgba(228,220,196,0.55)'); // barnacle crown
       K.scar(-0.3, 0.05, 0.55, -0.15); // an old harpoon wound
-      K.teeth(0.72, 0.3, 5, 0.1, 0.055);
+      K.teeth(0.68, 0.27, 5, 0.1, 0.055);
       K.slitEye(0.68, -0.08, 0.11);
       break;
     }

@@ -170,6 +170,18 @@ function stepWait(run, dt, input) {
 // it too. Slacken and it breathes again (slower with Iron Grip, faster on
 // LEVIATHAN). A SPENT monster comes in fast and pulls weak.
 export const staminaWord = (s) => (s > 70 ? 'FRESH' : s > 40 ? 'WINDING' : s > 15 ? 'TIRING' : 'SPENT');
+// The fight's floating callouts share one column over the monster: the
+// stamina word holds the bottom line, VITAL! and THRASHING! take the
+// lines above it in that order. Returns each callout's line number
+// (0 = not showing) so the three never print on top of each other.
+export function calloutLines(f) {
+  const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
+  const lines = { vital: 0, thrash: 0 };
+  let n = 0;
+  if (f.vitalFlash > 0 && f.wpT > 0) lines.vital = ++n;
+  if (surge01 > 0.78) lines.thrash = ++n;
+  return lines;
+}
 export const snapPoint = (run) => (hasBoon(run, 'cable') ? 106 : 100);
 
 function stepFight(run, dt, input) {

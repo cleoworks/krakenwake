@@ -7,6 +7,8 @@ import { WATER_Y, lurePos, poleTip } from './render.js';
 import { drawFishShape } from './shapes.js';
 import { drawKraken } from './shapes2.js';
 import { drawSeaTerrain } from './terrain.js';
+import { drawLimb } from './geom.js';
+import { calloutLines } from './fishing.js';
 
 // the fighting monster's on-screen geometry, so the weak point lands true
 function monsterGeom(run) {
@@ -85,52 +87,38 @@ function drawKrakenTheatre(ctx, run, t) {
   const f = run.fight;
   if (MONSTERS[f.mi].shape !== 'kraken') return;
   const g = monsterGeom(run);
-  // one long tentacle has hold of the dock's end post
-  ctx.strokeStyle = '#07090f';
+  // one long tentacle has hold of the dock's end post: a tapered limb
+  // off her flank, suckers underneath, that coils the post and curls free
+  const sag = Math.sin(t * 1.1) * 4;
+  drawLimb(ctx, [
+    g.x - g.s * 0.72, WATER_Y + 2, (g.x + 262) / 2, WATER_Y - 30 + sag,
+    336, 374, 272, 400,
+  ], Math.max(8, g.s * 0.17), Math.max(5, g.s * 0.09), '#07090f', -1, 3);
   ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(7, g.s * 0.13);
-  ctx.beginPath();
-  ctx.moveTo(g.x - g.s * 0.72, WATER_Y + 2);
-  ctx.quadraticCurveTo((g.x + 262) / 2, WATER_Y - 26 + Math.sin(t * 1.1) * 4, 266, 404);
-  ctx.stroke();
-  ctx.lineWidth = Math.max(5, g.s * 0.1);
-  for (const cy of [398, 410, 422]) {
+  for (let i = 0; i < 3; i++) { // the coil: full bands stepping down the post,
+    const cy = 397 + i * 12, rx = 13 - i, ry = 5 + i * 0.5; // each lit on top so it reads as a wrap
+    ctx.strokeStyle = '#07090f';
+    ctx.lineWidth = Math.max(5, g.s * 0.075);
     ctx.beginPath();
-    ctx.ellipse(264, cy, 12, 4.6, 0, 0, 6.29);
+    ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, 0, 6.29);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(190,205,225,0.20)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, 3.4, 5.9);
     ctx.stroke();
   }
-  ctx.fillStyle = 'rgba(238,205,192,0.5)';
-  for (let i = 1; i <= 3; i++) {
-    const q = i / 4;
-    const bx = (1 - q) * (1 - q) * (g.x - g.s * 0.72) + 2 * (1 - q) * q * ((g.x + 262) / 2) + q * q * 266;
-    ctx.beginPath();
-    ctx.arc(bx, WATER_Y - 12 - q * 8, 2.6, 0, 6.29);
-    ctx.fill();
-  }
-  // the slam, telegraphed: a tentacle rears, taller as the landing nears
+  // the slam, telegraphed: a tapered limb rears, its tip hooked to
+  // strike, taller as the landing nears
   if (f.event && f.event.id === 'slam' && f.event.phase === 'tele') {
     const q = 1 - Math.max(0, f.event.t) / 1.0;
     const bx = g.x + g.s * 0.92;
     const h = g.s * (0.7 + q * 1.5);
-    ctx.strokeStyle = '#07090f';
-    ctx.lineWidth = Math.max(8, g.s * 0.2);
-    ctx.beginPath();
-    ctx.moveTo(bx, WATER_Y + 4);
-    ctx.quadraticCurveTo(bx + g.s * 0.22, WATER_Y - h * 0.6, bx - g.s * 0.12 + Math.sin(t * 6) * 3, WATER_Y - h);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(190,205,225,0.18)'; // the ridge of light down its back
-    ctx.lineWidth = Math.max(1.4, g.s * 0.03);
-    ctx.beginPath();
-    ctx.moveTo(bx - g.s * 0.08, WATER_Y + 2);
-    ctx.quadraticCurveTo(bx + g.s * 0.12, WATER_Y - h * 0.6, bx - g.s * 0.2 + Math.sin(t * 6) * 3, WATER_Y - h * 0.98);
-    ctx.stroke();
-    for (const tt of [0.35, 0.6, 0.85]) { // suckers: a dark rim, a pale face
-      const sx = bx + g.s * 0.1 - tt * g.s * 0.14, sy = WATER_Y - h * tt;
-      ctx.fillStyle = 'rgba(30,16,14,0.8)';
-      ctx.beginPath(); ctx.arc(sx, sy, 3.9, 0, 6.29); ctx.fill();
-      ctx.fillStyle = 'rgba(238,205,192,0.55)';
-      ctx.beginPath(); ctx.arc(sx, sy, 3, 0, 6.29); ctx.fill();
-    }
+    const wob = Math.sin(t * 6) * 3;
+    drawLimb(ctx, [
+      bx, WATER_Y + 4, bx + g.s * 0.30, WATER_Y - h * 0.55,
+      bx + g.s * 0.04, WATER_Y - h * 0.94, bx - g.s * 0.36 + wob, WATER_Y - h * 0.84,
+    ], Math.max(9, g.s * 0.21), Math.max(3, g.s * 0.055), '#07090f', -1, 3);
     ctx.strokeStyle = 'rgba(255,80,64,0.5)';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -186,10 +174,13 @@ function drawVital(ctx, run, t) {
   ctx.beginPath();
   ctx.arc(p.x, p.y, 14 + (1 - a) * 22, 0, 6.29);
   ctx.stroke();
+  // the word joins the callout column over the monster, on its own
+  // line — never printed across THRASHING! or the stamina word
+  const lines = calloutLines(f);
   ctx.font = "800 22px system-ui, 'Segoe UI', sans-serif";
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffd94d';
-  ctx.fillText('VITAL!', p.x, p.y - 30 - (1 - a) * 12);
+  ctx.fillText('VITAL!', lurePos(run).x, WATER_Y - 64 - Math.max(1, lines.vital) * 38);
   ctx.restore();
   void t;
 }

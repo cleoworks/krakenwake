@@ -147,3 +147,53 @@ export function makeKit(ctx, s, color, eye) {
   const marks = (fn) => { ctx.save(); ctx.globalAlpha = 0.4; fn(); ctx.restore(); };
   return { bodyGrad, body, slitEye, teeth, speckle, scar, gills, ridge, marks };
 }
+
+// a tapered limb along a cubic spine (8 flat coords, px): a filled
+// outline narrowing from w0 to w1 with a pointed tip, a ridge of moon
+// light down the outer edge, and sucker rings — rim, face, pit — down
+// the inner face. face (+1 / -1) picks which side the suckers ride.
+export function drawLimb(ctx, p, w0, w1, color, face = 1, suckers = 3) {
+  const P = (t) => {
+    const u = 1 - t;
+    return [
+      u * u * u * p[0] + 3 * u * u * t * p[2] + 3 * u * t * t * p[4] + t * t * t * p[6],
+      u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7],
+    ];
+  };
+  const N = 8, S = [], L = [], R = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, pt = P(t), a = P(Math.max(0, t - 0.03)), b = P(Math.min(1, t + 0.03));
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1;
+    dx /= m; dy /= m;
+    const w = (w0 + (w1 - w0) * t) / 2;
+    S.push(pt);
+    L.push([pt[0] - dy * w, pt[1] + dx * w]);
+    R.push([pt[0] + dy * w, pt[1] - dx * w]);
+  }
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(L[0][0], L[0][1]);
+  for (let i = 1; i <= N; i++) ctx.lineTo(L[i][0], L[i][1]);
+  const tx = S[N][0] + (S[N][0] - S[N - 1][0]) * 0.6, ty = S[N][1] + (S[N][1] - S[N - 1][1]) * 0.6;
+  ctx.lineTo(tx, ty);
+  for (let i = N; i >= 0; i--) ctx.lineTo(R[i][0], R[i][1]);
+  ctx.closePath();
+  ctx.fill();
+  const E = face > 0 ? R : L, O = face > 0 ? L : R; // suckers on E, light on O
+  ctx.strokeStyle = 'rgba(190,205,225,0.16)';
+  ctx.lineWidth = Math.max(1.1, w0 * 0.09);
+  ctx.beginPath(); // the light runs the edge's middle span, clear of base and tip
+  ctx.moveTo(O[2][0], O[2][1]);
+  for (let i = 3; i <= N - 2; i++) ctx.lineTo(O[i][0], O[i][1]);
+  ctx.stroke();
+  for (let j = 0; j < suckers; j++) {
+    const i = Math.round((0.28 + j * 0.22) * N);
+    const cx = S[i][0] + (E[i][0] - S[i][0]) * 0.45, cy = S[i][1] + (E[i][1] - S[i][1]) * 0.45;
+    const sr = Math.hypot(E[i][0] - S[i][0], E[i][1] - S[i][1]) * 0.55 + 0.8;
+    ctx.fillStyle = 'rgba(30,16,14,0.8)';
+    ctx.beginPath(); ctx.arc(cx, cy, sr * 1.2, 0, 6.29); ctx.fill();
+    ctx.fillStyle = 'rgba(238,205,192,0.55)';
+    ctx.beginPath(); ctx.arc(cx, cy, sr, 0, 6.29); ctx.fill();
+  }
+}

@@ -1,6 +1,6 @@
 // shapes2.js — one job: the Maw monsters and the Mother Kraken herself,
 // creature-poster style: angular, scarred, slit-eyed. See shapes.js.
-import { shade, makeKit } from './geom.js';
+import { shade, makeKit, drawLimb } from './geom.js';
 
 export function drawDeepShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
   ctx.save();
@@ -99,23 +99,24 @@ export function drawDeepShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
       break;
     }
     case 'turtle': {
-      ctx.fillStyle = K.bodyGrad(s * 0.66); // a faceted shell of plates
+      ctx.fillStyle = K.bodyGrad(s * 0.66); // a shell whose rim is a sawtooth of spikes
       ctx.beginPath();
-      ctx.moveTo(-s * 0.78, s * 0.32); ctx.lineTo(-s * 0.62, -s * 0.28); ctx.lineTo(-s * 0.25, -s * 0.58);
-      ctx.lineTo(s * 0.25, -s * 0.6); ctx.lineTo(s * 0.62, -s * 0.3); ctx.lineTo(s * 0.78, s * 0.3);
+      ctx.moveTo(-s * 0.94, s * 0.14); ctx.lineTo(-s * 0.78, s * 0.32); ctx.lineTo(-s * 0.68, -s * 0.14);
+      ctx.lineTo(-s * 0.56, -s * 0.5); ctx.lineTo(-s * 0.42, -s * 0.34); ctx.lineTo(-s * 0.26, -s * 0.6);
+      ctx.lineTo(-s * 0.08, -s * 0.42); ctx.lineTo(s * 0.1, -s * 0.62); ctx.lineTo(s * 0.26, -s * 0.44);
+      ctx.lineTo(s * 0.44, -s * 0.56); ctx.lineTo(s * 0.6, -s * 0.28); ctx.lineTo(s * 0.84, -s * 0.38);
+      ctx.lineTo(s * 0.76, -s * 0.04); ctx.lineTo(s * 0.78, s * 0.3);
       ctx.lineTo(s * 0.4, s * 0.52); ctx.lineTo(-s * 0.4, s * 0.52); ctx.closePath(); ctx.fill();
       K.marks(() => { // plate seams
         ctx.strokeStyle = 'rgba(2,4,8,0.6)';
         ctx.lineWidth = s * 0.045;
         for (const px of [-0.34, 0.02, 0.38]) {
           ctx.beginPath();
-          ctx.moveTo(px * s, -s * 0.52); ctx.lineTo((px - 0.05) * s, s * 0.46);
+          ctx.moveTo(px * s, -s * 0.34); ctx.lineTo((px - 0.05) * s, s * 0.46);
           ctx.stroke();
         }
         ctx.beginPath(); ctx.moveTo(-s * 0.7, s * 0.05); ctx.lineTo(s * 0.7, s * 0.05); ctx.stroke();
       });
-      ctx.fillStyle = shade(color, 0.7);
-      K.ridge(-0.62, 0.62, -0.55, 6, 0.12); // rim spikes
       K.scar(-0.15, -0.3, 0.4, 0.15); // a cracked, scarred plate
       ctx.fillStyle = K.bodyGrad(s * 0.2); // the head, and its hooked beak
       ctx.beginPath();
@@ -126,11 +127,11 @@ export function drawDeepShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
       break;
     }
     case 'squid': {
-      ctx.fillStyle = K.bodyGrad(s * 0.55); // a ridged, pointed mantle
+      ctx.fillStyle = K.bodyGrad(s * 0.55); // a ridged mantle with a hooked point
       ctx.beginPath();
-      ctx.moveTo(0, -s * 0.95); ctx.lineTo(s * 0.3, -s * 0.4); ctx.lineTo(s * 0.42, s * 0.05);
-      ctx.lineTo(s * 0.3, s * 0.32); ctx.lineTo(-s * 0.3, s * 0.32); ctx.lineTo(-s * 0.42, s * 0.05);
-      ctx.lineTo(-s * 0.3, -s * 0.4); ctx.closePath(); ctx.fill();
+      ctx.moveTo(s * 0.1, -s * 1.14); ctx.lineTo(s * 0.34, -s * 0.42); ctx.lineTo(s * 0.44, s * 0.05);
+      ctx.lineTo(s * 0.3, s * 0.32); ctx.lineTo(-s * 0.3, s * 0.32); ctx.lineTo(-s * 0.44, s * 0.05);
+      ctx.lineTo(-s * 0.32, -s * 0.44); ctx.lineTo(-s * 0.14, -s * 0.58); ctx.closePath(); ctx.fill();
       K.marks(() => { // mantle ridges
         ctx.strokeStyle = 'rgba(2,4,8,0.5)';
         ctx.lineWidth = s * 0.04;
@@ -140,19 +141,23 @@ export function drawDeepShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
           ctx.stroke();
         }
       });
-      ctx.fillStyle = shade(color, 0.8); // the fins, jagged
+      ctx.fillStyle = shade(color, 0.8); // the fins, deeply notched
       ctx.beginPath();
-      ctx.moveTo(-s * 0.34, -s * 0.5); ctx.lineTo(-s * 0.62, -s * 0.28); ctx.lineTo(-s * 0.4, -s * 0.12);
-      ctx.lineTo(-s * 0.58, s * 0.02); ctx.lineTo(-s * 0.32, -s * 0.05); ctx.fill();
+      ctx.moveTo(-s * 0.36, -s * 0.52); ctx.lineTo(-s * 0.66, -s * 0.34); ctx.lineTo(-s * 0.44, -s * 0.2);
+      ctx.lineTo(-s * 0.64, -s * 0.08); ctx.lineTo(-s * 0.42, 0); ctx.lineTo(-s * 0.58, s * 0.1);
+      ctx.lineTo(-s * 0.34, s * 0.02); ctx.fill();
       ctx.beginPath();
-      ctx.moveTo(s * 0.34, -s * 0.5); ctx.lineTo(s * 0.62, -s * 0.28); ctx.lineTo(s * 0.4, -s * 0.12);
-      ctx.lineTo(s * 0.58, s * 0.02); ctx.lineTo(s * 0.32, -s * 0.05); ctx.fill();
-      ctx.strokeStyle = shade(color, 0.85); // the arms
+      ctx.moveTo(s * 0.36, -s * 0.52); ctx.lineTo(s * 0.66, -s * 0.34); ctx.lineTo(s * 0.44, -s * 0.2);
+      ctx.lineTo(s * 0.64, -s * 0.08); ctx.lineTo(s * 0.42, 0); ctx.lineTo(s * 0.58, s * 0.1);
+      ctx.lineTo(s * 0.34, s * 0.02); ctx.fill();
+      ctx.strokeStyle = shade(color, 0.85); // the arms, uneven, curling
       ctx.lineWidth = s * 0.11; ctx.lineCap = 'round';
       for (let i = 0; i < 5; i++) {
         const fx = -s * 0.3 + i * s * 0.15;
+        const reach = s * (i === 2 ? 1.06 : i % 2 ? 0.92 : 0.78);
+        const curl = (i % 2 ? -1 : 1) * s * 0.09;
         ctx.beginPath();
-        ctx.moveTo(fx, s * 0.3); ctx.lineTo(fx + s * 0.12, s * 0.62); ctx.lineTo(fx - s * 0.04, s * 0.95);
+        ctx.moveTo(fx, s * 0.3); ctx.lineTo(fx + s * 0.12, s * 0.3 + reach * 0.55); ctx.lineTo(fx + curl, s * 0.3 + reach);
         ctx.stroke();
       }
       K.speckle(7, -0.3, 0.3, -0.7, 0.1, 'rgba(240,220,210,0.4)');
@@ -169,93 +174,86 @@ export function drawDeepShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
   ctx.restore();
 }
 
-// The Mother Kraken: a ridged, scarred dome, heavy brows over slit-pupil
-// eyes, a beak low between them, and five tentacles whose suckers are
-// rings with depth. s is the dome radius.
-export function drawKraken(ctx, x, y, s, t, color = '#07090f') {
+// The Mother Kraken — no dome any more. An asymmetric mantle with a
+// pointed, ridged crown leaning toward the hunter, segmentation flowing
+// down her left flank, a scowling face (brow shelves over slit-pupil
+// eyes, cheek planes tapering to a beak) and five tapered limbs rising
+// behind her, suckers down their inner faces. s is the mantle scale;
+// maw runs 0 (beak shut) to 1 (gape open, when she thrashes).
+export function drawKraken(ctx, x, y, s, t, color = '#07090f', maw = 0) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.strokeStyle = color;
-  ctx.lineCap = 'round';
+  const limbs = [ // spine cubics + base width + sucker side, per limb
+    [-0.78, 0.30, -1.08, -0.55, -0.70, -1.28, -1.04, -1.60, 0.30, 1], [-0.42, 0.32, -0.58, -0.60, -0.26, -1.08, -0.46, -1.40, 0.27, 1],
+    [-0.04, 0.32, 0.04, -0.70, -0.14, -1.30, 0.08, -1.68, 0.30, 1], [0.36, 0.32, 0.52, -0.55, 0.32, -1.02, 0.60, -1.32, 0.27, -1],
+    [0.74, 0.30, 0.98, -0.50, 0.76, -1.12, 1.06, -1.44, 0.28, -1],
+  ];
   for (let i = 0; i < 5; i++) {
-    const fx = -s * 0.92 + i * s * 0.46;
-    const lean = Math.sin(t * 1.3 + i * 1.9) * s * 0.1;
-    const h = s * (1.5 + 0.35 * Math.sin(i * 2.4));
-    const cxp = fx + lean - s * 0.2;
-    const x2 = fx + lean + (i < 2 ? -s * 0.34 : s * 0.3);
-    ctx.lineWidth = s * 0.3 * (1 - i * 0.06);
-    ctx.beginPath();
-    ctx.moveTo(fx, s * 0.1); ctx.quadraticCurveTo(cxp, -h * 0.6, x2, -h); ctx.stroke();
-    if (i >= 1 && i <= 3) { // a ridge of light down the outer edge
-      ctx.strokeStyle = 'rgba(190,205,225,0.16)';
-      ctx.lineWidth = Math.max(1.2, s * 0.035);
-      ctx.beginPath();
-      ctx.moveTo(fx - s * 0.1, s * 0.05); ctx.quadraticCurveTo(cxp - s * 0.12, -h * 0.6, x2 - s * 0.08, -h * 0.97);
-      ctx.stroke();
-      ctx.strokeStyle = color;
-    }
-    for (const tt of [0.35, 0.65]) { // suckers: rim, face, pit
-      const bx = (1 - tt) * (1 - tt) * fx + 2 * (1 - tt) * tt * cxp + tt * tt * x2;
-      const by = (1 - tt) * (1 - tt) * s * 0.1 + 2 * (1 - tt) * tt * -h * 0.6 + tt * tt * -h;
-      const sr = s * 0.05 * (1 - tt * 0.4);
-      ctx.fillStyle = 'rgba(30,16,14,0.8)';
-      ctx.beginPath(); ctx.arc(bx + s * 0.07, by, sr * 1.25, 0, 6.29); ctx.fill();
-      ctx.fillStyle = 'rgba(238,205,192,0.6)';
-      ctx.beginPath(); ctx.arc(bx + s * 0.07, by, sr, 0, 6.29); ctx.fill();
-    }
+    const L = limbs[i], sw = Math.sin(t * 1.3 + i * 1.9) * s * 0.07;
+    drawLimb(ctx, [L[0] * s, L[1] * s, L[2] * s, L[3] * s, L[4] * s + sw, L[5] * s, L[6] * s + sw * 1.5, L[7] * s], L[8] * s, s * 0.055, color, L[9], 3);
   }
-  const dg = ctx.createLinearGradient(0, -s, 0, s * 0.4);
-  dg.addColorStop(0, '#1c2536');
-  dg.addColorStop(0.6, color);
+  const dg = ctx.createLinearGradient(0, -s * 1.2, 0, s * 0.5);
+  dg.addColorStop(0, '#1e2839');
+  dg.addColorStop(0.55, color);
   dg.addColorStop(1, '#04060a');
   ctx.fillStyle = dg;
-  ctx.beginPath();
-  ctx.arc(0, 0, s, 3.14, 6.29);
-  ctx.quadraticCurveTo(0, s * 0.42, -s, 0);
+  ctx.beginPath(); // the mantle: flank swells, crown, valley, rear spike
+  ctx.moveTo(-s * 1.00, s * 0.30);
+  ctx.quadraticCurveTo(-s * 1.10, s * 0.12, -s * 1.03, -s * 0.10);
+  ctx.quadraticCurveTo(-s * 1.06, -s * 0.30, -s * 0.94, -s * 0.48);
+  ctx.quadraticCurveTo(-s * 0.86, -s * 0.72, -s * 0.62, -s * 0.94);
+  ctx.lineTo(-s * 0.38, -s * 1.24); // the crown tip, leaning at the hunter
+  ctx.quadraticCurveTo(-s * 0.22, -s * 0.98, -s * 0.06, -s * 0.92);
+  ctx.lineTo(s * 0.16, -s * 1.05); // the lesser rear spike
+  ctx.quadraticCurveTo(s * 0.52, -s * 0.86, s * 0.78, -s * 0.55);
+  ctx.quadraticCurveTo(s * 1.00, -s * 0.28, s * 1.00, s * 0.30);
+  ctx.quadraticCurveTo(0, s * 0.55, -s * 1.00, s * 0.30); // the submerged skirt
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.4)'; // mantle ridges following the dome
+  ctx.strokeStyle = 'rgba(190,205,225,0.20)'; // rim light over the crown
+  ctx.lineWidth = Math.max(1.2, s * 0.028);
+  ctx.beginPath();
+  ctx.moveTo(-s * 1.03, -s * 0.10);
+  ctx.quadraticCurveTo(-s * 0.86, -s * 0.72, -s * 0.62, -s * 0.94);
+  ctx.lineTo(-s * 0.38, -s * 1.24);
+  ctx.moveTo(s * 0.16, -s * 1.05);
+  ctx.quadraticCurveTo(s * 0.52, -s * 0.86, s * 0.78, -s * 0.55);
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; // mantle ridges, crown to flank
   ctx.lineWidth = Math.max(1.4, s * 0.03);
-  for (const rr of [0.75]) {
-    ctx.beginPath(); ctx.arc(0, s * 0.08, s * rr, 3.5, 5.9); ctx.stroke();
+  for (const [a, b, c, d, e, f2] of [[-0.30, -1.02, -0.55, -0.80, -0.78, -0.42], [-0.16, -0.84, -0.38, -0.58, -0.60, -0.16], [0.24, -0.80, 0.50, -0.58, 0.68, -0.24]]) {
+    ctx.beginPath(); ctx.moveTo(a * s, b * s); ctx.quadraticCurveTo(c * s, d * s, e * s, f2 * s); ctx.stroke();
   }
-  ctx.fillStyle = 'rgba(214,200,180,0.30)'; // skin speckle, fixed hash
-  for (let i = 0; i < 7; i++) {
-    const a = 3.3 + ((i * 2654435761) % 1000) / 1000 * 2.7;
-    const rad = s * (0.25 + ((i * 40503) % 1000) / 1000 * 0.68);
-    const px = Math.cos(a) * rad;
-    const py = Math.sin(a) * rad * 0.82;
-    if (py > -s * 0.06) continue;
-    ctx.beginPath(); ctx.arc(px, py, Math.max(1, s * 0.016 * (1 + (i % 3) * 0.5)), 0, 6.29); ctx.fill();
+  for (const [a, b] of [[-0.97, -0.22], [-0.90, 0.02], [-0.82, -0.44]]) { // segment ticks
+    ctx.beginPath(); ctx.moveTo(a * s, b * s); ctx.lineTo((a + 0.16) * s, (b + 0.05) * s); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(214,200,180,0.30)'; // skin speckle, placed on the mass
+  for (const [px, py, pr] of [[-0.55, -0.80, 0.020], [-0.30, -0.62, 0.016], [-0.72, -0.52, 0.024], [0.05, -0.70, 0.016], [0.42, -0.60, 0.020], [-0.12, -0.40, 0.014], [0.62, -0.34, 0.016]]) {
+    ctx.beginPath(); ctx.arc(px * s, py * s, Math.max(0.9, pr * s), 0, 6.29); ctx.fill();
   }
   ctx.fillStyle = 'rgba(226,214,190,0.5)'; // barnacle clusters
-  for (const [bx, by] of [[-0.62, -0.5], [0.55, -0.68]]) {
-    for (let j = 0; j < 3; j++) {
-      ctx.beginPath(); ctx.arc((bx + j * 0.055) * s, (by + (j % 2) * 0.05) * s, Math.max(1.1, s * 0.02), 0, 6.29); ctx.fill();
-    }
+  for (const [bx, by] of [[-0.50, -0.90], [0.60, -0.50]]) {
+    for (let j = 0; j < 3; j++) { ctx.beginPath(); ctx.arc((bx + j * 0.055) * s, (by + (j % 2) * 0.05) * s, Math.max(1.1, s * 0.02), 0, 6.29); ctx.fill(); }
   }
   ctx.strokeStyle = 'rgba(232,222,198,0.5)'; // two old harpoon wounds
   ctx.lineWidth = Math.max(1.2, s * 0.025);
-  for (const [sx, sy, sl, sa] of [[-0.45, -0.62, 0.3, 0.4], [0.3, -0.45, 0.22, -0.3]]) {
-    ctx.save();
-    ctx.translate(sx * s, sy * s);
-    ctx.rotate(sa);
+  for (const [sx, sy, sl, sa] of [[-0.66, -0.66, 0.3, 0.5], [0.3, -0.42, 0.22, -0.3]]) {
+    ctx.save(); ctx.translate(sx * s, sy * s); ctx.rotate(sa);
     ctx.beginPath();
     ctx.moveTo(0, 0); ctx.lineTo(sl * s * 0.4, s * 0.02); ctx.lineTo(sl * s * 0.7, -s * 0.015); ctx.lineTo(sl * s, s * 0.02);
-    ctx.stroke();
-    ctx.restore();
+    ctx.stroke(); ctx.restore();
   }
-  ctx.fillStyle = '#0d0507'; // the beak: a dark hooked hint between the eyes
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.13, -s * 0.1);
-  ctx.quadraticCurveTo(0, s * 0.16, s * 0.13, -s * 0.1);
-  ctx.quadraticCurveTo(0, s * 0.02, -s * 0.13, -s * 0.1);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(232,190,160,0.35)';
-  ctx.lineWidth = Math.max(1, s * 0.02);
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.13, -s * 0.1); ctx.quadraticCurveTo(0, s * 0.16, s * 0.13, -s * 0.1); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.32)'; // cheek planes tapering to the beak
+  for (const d of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(d * s * 0.52, -s * 0.06); ctx.lineTo(d * s * 0.20, -s * 0.02);
+    ctx.lineTo(d * s * 0.09, s * 0.20); ctx.lineTo(d * s * 0.34, s * 0.26);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)'; // the jaw edges
+  ctx.lineWidth = Math.max(1.2, s * 0.028);
+  for (const d of [-1, 1]) { ctx.beginPath(); ctx.moveTo(d * s * 0.55, -s * 0.10); ctx.quadraticCurveTo(d * s * 0.34, s * 0.16, d * s * 0.12, s * 0.24); ctx.stroke(); }
   for (const d of [-0.36, 0.36]) { // the eyes, under heavy brows
-    const ex = d * s, ey = -s * 0.34;
+    const ex = d * s, ey = -s * 0.32;
     ctx.fillStyle = 'rgba(255,59,48,0.20)'; // a flat ember-glow behind the eye
     ctx.beginPath(); ctx.ellipse(ex, ey + s * 0.02, s * 0.19, s * 0.12, 0, 0, 6.29); ctx.fill();
     ctx.fillStyle = '#0a0d14'; // the brow: a heavy angled shelf of flesh
@@ -263,6 +261,9 @@ export function drawKraken(ctx, x, y, s, t, color = '#07090f') {
     ctx.moveTo(ex - s * 0.17, ey - s * 0.1); ctx.lineTo(ex + s * 0.17, ey - s * 0.16);
     ctx.lineTo(ex + s * 0.15, ey - s * 0.02); ctx.lineTo(ex - s * 0.15, ey + s * 0.03);
     ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(190,205,225,0.22)'; // the brow's top edge catches the moon
+    ctx.lineWidth = Math.max(1, s * 0.02);
+    ctx.beginPath(); ctx.moveTo(ex - s * 0.17, ey - s * 0.10); ctx.lineTo(ex + s * 0.17, ey - s * 0.16); ctx.stroke();
     ctx.fillStyle = '#ff3b30'; // the almond
     ctx.beginPath();
     ctx.moveTo(ex - s * 0.11, ey + s * 0.03);
@@ -272,5 +273,25 @@ export function drawKraken(ctx, x, y, s, t, color = '#07090f') {
     ctx.fillStyle = '#0d0405'; // the slit
     ctx.beginPath(); ctx.ellipse(ex, ey + s * 0.03, s * 0.022, s * 0.055, 0, 0, 6.29); ctx.fill();
   }
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; // the scowl crease between the brows
+  ctx.lineWidth = Math.max(1.2, s * 0.03); ctx.beginPath(); ctx.moveTo(-s * 0.10, -s * 0.45); ctx.lineTo(0, -s * 0.40); ctx.lineTo(s * 0.10, -s * 0.45); ctx.stroke();
+  if (maw > 0.02) { // the gape: dark, with an ember deep in it
+    ctx.fillStyle = '#140309';
+    ctx.beginPath(); ctx.ellipse(0, s * 0.09, s * 0.135, s * (0.02 + maw * 0.12), 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = 'rgba(150,30,20,0.45)';
+    ctx.beginPath(); ctx.ellipse(0, s * 0.10, s * 0.07, s * (0.01 + maw * 0.055), 0, 0, 6.29); ctx.fill();
+  }
+  const lift = maw * s * 0.07, drop = maw * s * 0.10;
+  ctx.fillStyle = '#171009'; // the upper beak: a hooked bill, lifting as she gapes
+  ctx.beginPath(); ctx.moveTo(-s * 0.155, -s * 0.015 - lift);
+  ctx.quadraticCurveTo(0, s * 0.115 - lift, s * 0.155, -s * 0.015 - lift); ctx.quadraticCurveTo(0, s * 0.03 - lift, -s * 0.155, -s * 0.015 - lift);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(232,190,160,0.4)';
+  ctx.lineWidth = Math.max(1, s * 0.018);
+  ctx.beginPath(); ctx.moveTo(-s * 0.155, -s * 0.015 - lift); ctx.quadraticCurveTo(0, s * 0.115 - lift, s * 0.155, -s * 0.015 - lift); ctx.stroke();
+  ctx.fillStyle = '#100b06'; // the lower beak: a smaller point, dropping away
+  ctx.beginPath(); ctx.moveTo(-s * 0.105, s * 0.085 + drop);
+  ctx.quadraticCurveTo(0, s * 0.20 + drop, s * 0.105, s * 0.085 + drop); ctx.quadraticCurveTo(0, s * 0.125 + drop, -s * 0.105, s * 0.085 + drop);
+  ctx.fill();
   ctx.restore();
 }

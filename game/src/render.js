@@ -37,7 +37,7 @@ function drawSky(ctx, run, t) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, WATER_Y);
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  for (let i = 0; i < 56; i++) {
+  for (let i = 0; i < 42; i++) {
     const x = (i * 173.3) % 1280;
     const y = 12 + starY(i) * 300;
     if (Math.hypot(x - 1085, y - 92) < 70) continue;
@@ -84,7 +84,7 @@ function drawWater(ctx, run, t) {
   // swell lines drifting
   ctx.strokeStyle = 'rgba(160,210,240,0.13)';
   ctx.lineWidth = 2;
-  for (let row = 0; row < 4; row++) {
+  for (let row = 0; row < 3; row++) {
     const y = WATER_Y + 26 + row * 52;
     ctx.beginPath();
     for (let x = 0; x <= 1280; x += 32) {
@@ -206,7 +206,11 @@ function drawMonster(ctx, run, t) {
     const p = lurePos(run);
     const near = Math.max(0, 1 - f.dist / 95);
     if (m.shape === 'kraken') {
-      drawKraken(ctx, p.x, WATER_Y + 6, 85 + near * 85, t);
+      // her beak gapes while she thrashes — the same surge signal the
+      // THRASHING! callout reads
+      const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
+      const maw = Math.min(1, Math.max(0, (surge01 - 0.78) / 0.22) * 1.3);
+      drawKraken(ctx, p.x, WATER_Y + 6, 85 + near * 85, t, undefined, maw);
     } else {
       const s = 20 + near * 30 + Math.min(16, f.kg * 0.3);
       const bob = Math.sin(t * 2.2) * 3;
