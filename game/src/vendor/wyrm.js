@@ -232,13 +232,120 @@ function ribbon(ctx, s, rear) {
     const a = spineGeom(ci * SUB, 0.46 * s, -0.55, s * 0.08);
     if (a) neckSpines.push(a);
   }
-  // (the neck frill is carried by the mane and the blade row
-  // themselves — the translucent membranes once webbed between the
-  // last blades were cut: heavy in PNG bytes, and the fin read
-  // survives on the blades alone)
+  // THE NECK FRILL: a light translucent membrane webbed between
+  // the blades nearest the head — one flat fill, its edge inset
+  // from the tips so the blades still crown it. (A fuller set of
+  // membranes was cut once for PNG bytes; this single web high on
+  // the neck earns its bytes back in the fin read.)
+  const frill = neckSpines.slice(-4);
+  if (frill.length > 2) {
+    const web = (g) => [g.bx + (g.tip[0] - g.bx) * 0.72, g.by + (g.tip[1] - g.by) * 0.72];
+    const pts = frill.map((g) => [g.bx, g.by]);
+    for (let i = frill.length - 1; i >= 0; i--) pts.push(web(frill[i]));
+    poly(ctx, pts, 'rgba(196,132,44,0.34)');
+  }
   neckSpines.forEach((g, i) => drawSpine(g, i % 2 ? shade(BRONZE, 0.85) : BRONZE));
   ctx.restore();
   return ctrl;
+}
+
+// paintSwimBody(ctx, S, L, R, W): the rich skin for a swimming-back
+// ribbon whose geometry has already been laid out (theatre.js's
+// loopRibbon) — S the spine samples, L/R its two edges, W the
+// waterline. Whichever edge rides higher on screen is the crest at
+// that sample; fractions run crest (0) to underside (1). The king's
+// own treatment, carried to every stretch of his body: two-tone
+// poster shading across the width (a lit crest, the water gold, a
+// deep amber underside), a scallop field shingled over the crest
+// half, seams bowed along the curve, and curved bronze blades on
+// any crest that rides clear of the surface — no plain tube left.
+export function paintSwimBody(ctx, S, L, R, W) {
+  const top = S.map((p, i) => (L[i][1] <= R[i][1] ? L[i] : R[i]));
+  const bot = S.map((p, i) => (L[i][1] <= R[i][1] ? R[i] : L[i]));
+  const crossAt = (si, f) => [top[si][0] + (bot[si][0] - top[si][0]) * f, top[si][1] + (bot[si][1] - top[si][1]) * f];
+  const band = (f0, f1) => {
+    const pts = [];
+    for (let si = 0; si < S.length; si++) pts.push(crossAt(si, f0));
+    for (let si = S.length - 1; si >= 0; si--) pts.push(crossAt(si, f1));
+    return pts;
+  };
+  const frameAt = (si) => {
+    const a = S[Math.max(0, si - 1)], b = S[Math.min(S.length - 1, si + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1;
+    return { dx: dx / m, dy: dy / m };
+  };
+  const halfW = (si) => Math.hypot(top[si][0] - bot[si][0], top[si][1] - bot[si][1]) / 2;
+  poly(ctx, band(0, 0.30), shade(GOLD.water, 1.30));
+  poly(ctx, band(0.30, 0.74), GOLD.water);
+  poly(ctx, band(0.74, 1), shade(GOLD.water, 0.60));
+  // a lit line along the crest, amber shade along the underside
+  ctx.strokeStyle = 'rgba(255,226,150,0.85)'; ctx.lineWidth = 2;
+  ctx.beginPath(); top.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+  ctx.strokeStyle = 'rgba(110,70,18,0.55)'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); bot.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+  ctx.lineCap = 'round';
+  // scale bands across the back — bowed along the curve, spaced by
+  // arc length, each a dark seam with a lit lip on its head-side
+  const seamAt = (si) => {
+    const f = frameAt(si), th = halfW(si);
+    const a = crossAt(si, 0.02), b = crossAt(si, 0.98);
+    ctx.strokeStyle = shade(GOLD.water, 0.52); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(a[0], a[1]);
+    ctx.quadraticCurveTo((a[0] + b[0]) / 2 + f.dx * th * 0.38, (a[1] + b[1]) / 2 + f.dy * th * 0.38, b[0], b[1]);
+    ctx.stroke();
+  };
+  let acc = 0;
+  for (let si = 2; si < S.length - 2; si++) {
+    acc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (acc >= Math.max(54, halfW(si) * 3.4)) { acc = 0; if (S[si][1] < W - 2) seamAt(si); }
+  }
+  // THE SCALLOP FIELD over the crest half: pale arcs on the lit
+  // crest band, dark seams on the gold below it, staggered row to
+  // row — solid tones, no alpha, poster-crisp and PNG-cheap. Only
+  // where the body rides above the surface.
+  ctx.lineWidth = 1.3;
+  let racc = 0, row = 0;
+  for (let si = 2; si < S.length - 2; si++) {
+    racc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (racc < halfW(si) * 1.5) continue;
+    racc = 0; row++;
+    if (S[si][1] > W - 2) continue;
+    const f = frameAt(si), th = halfW(si);
+    for (const fr0 of [0.15, 0.38]) {
+      const fr = fr0 + (row % 2) * 0.06;
+      const a = crossAt(si, fr - 0.11), b = crossAt(si, fr + 0.11);
+      ctx.strokeStyle = fr < 0.26 ? shade(GOLD.water, 1.52) : shade(GOLD.water, 0.58);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]);
+      ctx.quadraticCurveTo((a[0] + b[0]) / 2 - f.dx * th * 0.42, (a[1] + b[1]) / 2 - f.dy * th * 0.42, b[0], b[1]);
+      ctx.stroke();
+    }
+  }
+  // DORSAL BLADES along any crest riding clear of the surface —
+  // curved bronze fins swept back along the curve, grown from the
+  // crest, never pasted: a wide base sunk into the back, each side
+  // bowing out to the tip like the neck's own blades
+  let sacc = 0;
+  for (let si = 2; si < S.length - 2; si++) {
+    sacc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (sacc < Math.max(66, halfW(si) * 4.4)) continue;
+    sacc = 0;
+    const th = halfW(si), f = frameAt(si);
+    if (top[si][1] > W - 14) continue; // the crest must ride clear
+    let nx = top[si][0] - S[si][0], ny = top[si][1] - S[si][1];
+    const nm = Math.hypot(nx, ny) || 1; nx /= nm; ny /= nm;
+    const bx = S[si][0] + nx * th * 0.82, by = S[si][1] + ny * th * 0.82;
+    const len = th * 1.05, lean = -0.35;
+    const tip = [bx + nx * len + f.dx * len * lean, by + ny * len + f.dy * len * lean];
+    if (tip[1] > W + 2) continue; // no tip may end under the surface
+    const hw = th * 0.34, ow = hw * 0.6;
+    const mx = bx + (tip[0] - bx) * 0.55, my = by + (tip[1] - by) * 0.55;
+    poly(ctx, [[bx - f.dx * hw, by - f.dy * hw],
+      [mx - f.dx * ow + nx * hw * 0.14, my - f.dy * ow + ny * hw * 0.14],
+      tip,
+      [mx + f.dx * ow + nx * hw * 0.14, my + f.dy * ow + ny * hw * 0.14],
+      [bx + f.dx * hw, by + f.dy * hw]], shade(BRONZE, 0.72));
+  }
 }
 
 // a BLEND ZONE where the body breaks the surface — "penuh tapi nyatu
@@ -347,6 +454,12 @@ function head(ctx, s, K, hx, hy, maw, rear) {
     ctx.quadraticCurveTo(c2[0] * s, c2[1] * s, start[0] * s, start[1] * s);
     ctx.closePath(); ctx.fill();
   };
+  // the whole fan — both membranes, the bronze rays, the lit rim —
+  // is GROWN from its root at the skull: one uniform swell about
+  // the anchor, so every spike reaches further and the mane reads
+  // LUSH like the concept's, with all its curves still in step
+  ctx.save();
+  ctx.translate(0.13 * s, 0); ctx.scale(1.22, 1.22); ctx.translate(-0.13 * s, 0);
   mane([[[0.09, -0.27], [0.17, -0.35], [0.235, -0.315], [0.26, -0.21]],
     [[0.265, -0.335], [0.35, -0.39], [0.415, -0.335], [0.43, -0.21]],
     [[0.445, -0.315], [0.53, -0.31], [0.575, -0.225], [0.56, -0.11]],
@@ -373,6 +486,7 @@ function head(ctx, s, K, hx, hy, maw, rear) {
   ctx.quadraticCurveTo(0.56 * s, -0.11 * s, 0.65 * s, 0.03 * s);
   ctx.quadraticCurveTo(0.55 * s, 0.11 * s, 0.61 * s, 0.27 * s);
   ctx.quadraticCurveTo(0.48 * s, 0.29 * s, 0.49 * s, 0.43 * s); ctx.stroke();
+  ctx.restore();
   horns(ctx, s, -0.035, 0.01, 0.88, shade(BRONZE, 0.62)); // the far horns, darker, root hidden by the skull
   poly(ctx, M([[0.22, -0.048], [0.10, -0.115], [-0.02, -0.142], [-0.16, -0.158], [-0.30, -0.156], [-0.44, -0.140], [-0.56, -0.120], [-0.645, -0.098], [-0.685, -0.072], [-0.69, -0.038], [-0.672, -0.006], [-0.60, 0.016], [-0.48, 0.034], [-0.32, 0.048], [-0.14, 0.056], [0.04, 0.058], [0.22, 0.036]]), AMBER);
   // the skull, deep amber — a LONG dragon snout drawn in CURVES:

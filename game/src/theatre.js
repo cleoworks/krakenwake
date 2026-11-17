@@ -5,7 +5,7 @@ import { MONSTERS } from './data.js';
 import { ABILITY_INFO } from './abilities.js';
 import { WATER_Y, lurePos, calloutX } from './render.js';
 import { drawFishShape } from './vendor/shapes.js';
-import { drawWyrmGlyph, GOLD, blendCrossing } from './vendor/wyrm.js';
+import { drawWyrmGlyph, GOLD, blendCrossing, paintSwimBody } from './vendor/wyrm.js';
 import { drawSeaTerrain } from './terrain.js';
 import { calloutLines } from './fight.js';
 
@@ -117,28 +117,10 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1, tipLen = 0.22) {
     L.push([S[i][0] - dy * w, S[i][1] + dx * w]);
     R.push([S[i][0] + dy * w, S[i][1] - dx * w]);
   }
-  ctx.fillStyle = GOLD.water;
-  ctx.beginPath();
-  [...L, ...R.reverse()].forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
-  ctx.closePath(); ctx.fill();
-  // scale bands across the back — bowed along the curve and spaced by
-  // arc length, each a dark seam with a lit lip, never a straight slash
-  ctx.lineCap = 'round';
-  let acc = 0;
-  for (let i = 2; i < S.length - 2; i++) {
-    acc += Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1]);
-    if (acc < 200) continue;
-    acc = 0;
-    const a = S[i - 1], b = S[i + 1];
-    let dx = b[0] - a[0], dy = b[1] - a[1];
-    const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
-    const w = Math.hypot(L[i][0] - R[i][0], L[i][1] - R[i][1]) / 2;
-    const mx = (L[i][0] + R[i][0]) / 2 + dx * w * 0.38, my = (L[i][1] + R[i][1]) / 2 + dy * w * 0.38;
-    ctx.strokeStyle = 'rgba(46,26,4,0.55)'; ctx.lineWidth = 1.6;
-    ctx.beginPath(); ctx.moveTo(L[i][0], L[i][1]); ctx.quadraticCurveTo(mx, my, R[i][0], R[i][1]); ctx.stroke();
-  }
-  ctx.strokeStyle = 'rgba(255,226,150,0.7)'; ctx.lineWidth = 2;
-  ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+  // the rich skin — two-tone shading, a scallop field, bowed seams
+  // and crest blades — is painted by the wyrm's own painter, so a
+  // swimming back wears the same hide as the king himself
+  paintSwimBody(ctx, S, L, R, WATER_Y);
 }
 
 // --- the wyrm, close: his body swims to the dock and coils its post ---
