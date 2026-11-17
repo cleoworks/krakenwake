@@ -11,7 +11,7 @@ const ABILITY_BY_INDEX = {
   0: 'lunge', 1: 'armor', 4: 'falseglow', 5: 'ink', 6: 'lunge', 7: 'armor',
   8: 'phase', 9: 'phase', 10: 'armor', 11: 'ink', 12: 'slam',
 };
-export const abilityOf = (mi) => ABILITY_BY_INDEX[mi] ?? null;
+const abilityOf = (mi) => ABILITY_BY_INDEX[mi] ?? null;
 
 // The banner copy: the word, and the counter-play that answers it.
 export const ABILITY_INFO = {

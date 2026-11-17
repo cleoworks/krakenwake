@@ -1,7 +1,7 @@
 // shapes2.js — one job: the deep-sea monsters of the Wyrm's Maw,
 // creature-poster style: angular, scarred, slit-eyed. See shapes.js.
 // (The King Wyrm himself lives in wyrm.js.)
-import { shade, makeKit, drawLimb } from '../geom.js';
+import { shade, makeKit } from '../geom.js';
 
 export function drawDeepShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
   ctx.save();

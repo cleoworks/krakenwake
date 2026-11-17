@@ -8,7 +8,7 @@ import { initFightFx, stepFightEvents, stepWeakPoint, addSurge } from './abiliti
 
 const ev = (run, type, data = {}) => run.events.push({ type, ...data });
 
-export function earnFeat(run, id) {
+function earnFeat(run, id) {
   if (run.feats[id]) return;
   run.feats[id] = true;
   ev(run, 'feat', { id });

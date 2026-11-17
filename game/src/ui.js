@@ -65,7 +65,7 @@ export function drawRouteStrip(ctx, run, x, y, label = true) {
 }
 
 // Boon pips: one brass square per boon held, with its two-letter code.
-export function drawBoonPips(ctx, run, x, y, withLabel = true) {
+function drawBoonPips(ctx, run, x, y, withLabel = true) {
   if (!run.boons.length) return;
   if (withLabel) text(ctx, 'BOONS', x, y + 17, 13, '#8fb8d4');
   const x0 = withLabel ? x + 52 : x;

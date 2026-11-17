@@ -7,7 +7,7 @@ import { lurePos } from './render.js';
 
 // Is he hauling the rope in? Read off the fight's distance, cached per
 // distance value so rope and ninja agree within a frame.
-export function haulingNow(run, view) {
+function haulingNow(run, view) {
   const f = run.fight;
   if (run.phase !== 'fight' || !f) return false;
   const st = view._chain;

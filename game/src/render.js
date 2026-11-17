@@ -16,7 +16,7 @@ const DOCK_X = 168;
 export const MOON_X = 300, MOON_Y = 205; // open sky left of the callout column — no panel, bar or wyrm covers it
 
 // where the business end of the chain is, in pixels, for a distance in metres
-export const castX = (dist) => 400 + dist * 6.4;
+const castX = (dist) => 400 + dist * 6.4;
 export function lurePos(run) {
   if (run.phase === 'fight' && run.fight) {
     return { x: castX(run.fight.dist), y: WATER_Y + 4 };

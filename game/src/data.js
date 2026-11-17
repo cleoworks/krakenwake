@@ -51,7 +51,6 @@ export const MONSTERS = [
   { name: 'King Wyrm', sea: 2, power: 58, weight: 6, price: 556, bulk: 16, fake: 0.2, doom: true, shape: 'wyrm', color: '#d9a441' },
 ];
 
-export const WYRM_INDEX = 12;
 export const poolFor = (sea) => MONSTERS.map((m, i) => i).filter((i) => MONSTERS[i].sea === sea);
 
 // Difficulty: chosen on the briefing screen. mult scales SCORE (never coins);
