@@ -112,6 +112,26 @@ function ribbon(ctx, s, rear) {
     acc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
     if (acc >= s * 1.5) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
   }
+  // scale scallops on the sunlit flank: short arcs bowed off the
+  // lit edge between the bands, twice as fine as the seams — the
+  // hide reads as plated scale where the light catches it, not as
+  // smooth ribbon. Only where the body rides above the surface.
+  ctx.strokeStyle = 'rgba(255,226,150,0.32)';
+  ctx.lineWidth = Math.max(1, s * 0.011);
+  let sacc = 0;
+  for (let si = 6; si < S.length - 4; si++) {
+    sacc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (sacc < s * 0.62) continue;
+    sacc = 0;
+    if (S[si][1] > -s * 0.05) continue;
+    const f = frameAt(si), th = S[si][2];
+    const ex = R[si][0], ey = R[si][1];
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.quadraticCurveTo(ex - f.dy * th * 0.52 + f.dx * th * 0.22, ey + f.dx * th * 0.52 + f.dy * th * 0.22,
+      ex - f.dy * th * 1.02, ey + f.dx * th * 1.02);
+    ctx.stroke();
+  }
   // features ride the CONTROL points but take position and direction
   // from the smoothed curve (sample 8 per segment)
   const frame = (ci) => {

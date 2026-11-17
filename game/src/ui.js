@@ -130,53 +130,55 @@ export function drawHUD(ctx, run, view) {
   } else if (run.phase === 'fight' && run.fight) {
     const f = run.fight;
     const m = MONSTERS[f.mi];
-    // stamina: the named bar — FRESH monsters are a wall, SPENT ones are meat
+    // ONE slim strip hugging the bottom edge: stamina left, tension
+    // right, surge pips at the far end — the middle of the frame
+    // belongs to the water and whatever is coiling through it
+    panel(ctx, 16, 638, 1248, 52, 0.66);
     const word = staminaWord(f.stamina);
     const wordColor = word === 'FRESH' ? '#ff8a7a' : word === 'SPENT' ? '#39d353' : '#ffd94d';
-    text(ctx, 'STAMINA', 424, 540, 15, '#8fb8d4', 'right', 800);
-    text(ctx, `${m.name.toUpperCase()} — `, 640, 540, 21, '#e8d8ff', 'center');
-    const nameW = ctx.measureText(`${m.name.toUpperCase()} — `).width;
-    ctx.save();
-    text(ctx, word, 640 + nameW / 2, 540, 21, wordColor, 'left', 800);
-    ctx.restore();
+    text(ctx, 'STAMINA', 32, 660, 12, '#8fb8d4', 'left', 800);
+    text(ctx, `${m.name.toUpperCase()} — `, 96, 660, 15, '#e8d8ff', 'left');
+    const nw = ctx.measureText(`${m.name.toUpperCase()} — `).width;
+    text(ctx, word, 96 + nw, 660, 15, wordColor, 'left', 800);
+    const ww = ctx.measureText(word).width;
+    text(ctx, ` • ${Math.max(0, Math.ceil(f.dist))} m out`, 96 + nw + ww, 660, 15, '#8fb8d4', 'left', 400);
     ctx.fillStyle = 'rgba(255,255,255,0.14)';
-    rr(ctx, 440, 548, 400, 12, 6);
+    rr(ctx, 32, 668, 560, 9, 4);
     ctx.fill();
     ctx.fillStyle = '#c77dff';
-    rr(ctx, 440, 548, 400 * Math.max(0, f.stamina / 100), 12, 6);
+    rr(ctx, 32, 668, 560 * Math.max(0, f.stamina / 100), 9, 4);
     ctx.fill();
-    text(ctx, `HAULING: ${m.name} — ${Math.max(0, Math.ceil(f.dist))} m out`, 640, 592, 29, '#ffffff', 'center');
-    text(ctx, 'TENSION', 424, 632, 22, '#cfe8ff', 'right');
+    if (f.surgeT > 0) text(ctx, 'CHAIN SURGING!', 640, 660, 14, '#ffb52e', 'center', 800);
+    else text(ctx, 'HOLD to haul in — release to slacken', 640, 660, 13, '#cfe8ff', 'center', 400);
+    text(ctx, 'TENSION', 800, 660, 12, '#8fb8d4', 'left', 800);
     const snapAt = snapPoint(run);
-    const zx = (t) => 440 + (t / snapAt) * 400;
+    const zx = (t) => 800 + (t / snapAt) * 320;
     ctx.fillStyle = '#39d353';
-    rr(ctx, 440, 608, zx(60) - 440, 24, 4);
+    rr(ctx, 800, 667, zx(60) - 800, 11, 3);
     ctx.fill();
     ctx.fillStyle = '#ffb52e';
-    rr(ctx, zx(60), 608, zx(80) - zx(60), 24, 4);
+    rr(ctx, zx(60), 667, zx(80) - zx(60), 11, 3);
     ctx.fill();
     ctx.fillStyle = '#ff5040';
-    rr(ctx, zx(80), 608, 840 - zx(80), 24, 4);
+    rr(ctx, zx(80), 667, 1120 - zx(80), 11, 3);
     ctx.fill();
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(zx(Math.min(snapAt, f.tension)) - 3, 602, 6, 36);
-    // SURGE pips beside the tension bar: banked charges in brass, the one
-    // still filling shows its progress; F spends a charge mid-fight
-    text(ctx, 'CHAIN SURGE', 856, 600, 13, '#8fb8d4', 'left', 800);
+    ctx.fillRect(zx(Math.min(snapAt, f.tension)) - 2, 664, 5, 17);
+    // SURGE pips at the strip's far end: banked charges in brass, the
+    // one still filling shows its progress; F spends a charge mid-fight
+    text(ctx, 'SURGE', 1136, 660, 11, '#8fb8d4', 'left', 800);
     for (let i = 0; i < 2; i++) {
-      const px = 856 + i * 28;
+      const px = 1136 + i * 24;
       ctx.fillStyle = i < run.surgeCharges ? '#ffb52e' : 'rgba(255,255,255,0.12)';
-      rr(ctx, px, 608, 22, 24, 5);
+      rr(ctx, px, 666, 19, 13, 4);
       ctx.fill();
       if (i === run.surgeCharges && run.surgeFill > 0) {
         ctx.fillStyle = 'rgba(255,181,46,0.5)';
-        rr(ctx, px, 608 + 24 * (1 - run.surgeFill), 22, 24 * run.surgeFill, 5);
+        rr(ctx, px, 666 + 13 * (1 - run.surgeFill), 19, 13 * run.surgeFill, 4);
         ctx.fill();
       }
     }
-    text(ctx, '[F]', 912, 626, 15, '#cfe8ff', 'left', 800);
-    if (f.surgeT > 0) text(ctx, 'CHAIN SURGING!', 856, 654, 15, '#ffb52e', 'left', 800);
-    text(ctx, 'HOLD to haul in — release to slacken', 640, 668, 24, '#ffffff', 'center');
+    text(ctx, '[F]', 1188, 678, 13, '#cfe8ff', 'left', 800);
   } else {
     text(ctx, 'HOLD SPACE to charge your throw', 640, 640, 24, '#8fb8d4', 'center');
   }

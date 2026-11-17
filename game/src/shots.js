@@ -33,13 +33,15 @@ export function stageShot(name, view, burst) {
     // frozen at THE VANISH: the wyrm's COIL SLAM is telegraphed and
     // rearing down at the spot the ninja just left — he is mid-dash
     // (afterimages on the dock), the dodge was PERFECT, so the counter
-    // window is open: the crimson weak point flares on the wyrm's throat,
-    // VANISH! still hanging in the callout column, a VITAL tick landed
+    // window is open: the crimson weak point flares on the wyrm's
+    // throat. ONE shout only — VANISH! hangs in the callout column:
+    // no VITAL tick (vitalFlash 0), and surgePhase puts surge01
+    // under the THRASHING line, so the column stays quiet otherwise
     r.fight = {
-      mi: 12, dist: 73, tension: 63, t: 6.4, snapT: 0, surgePhase: 0, stamina: 46,
+      mi: 12, dist: 73, tension: 63, t: 6.4, snapT: 0, surgePhase: 2.0, stamina: 46,
       wpNext: 5, wpT: 0.9, wpFake: false, wpDx: 0.3, wpDy: 0.9,
       evIn: 8, evCount: 1, event: { id: 'slam', phase: 'tele', t: 0.35 },
-      surgeT: 0, vitalAcc: 0, vitalFlash: 0.4, spikeT: 0, inkT: 0,
+      surgeT: 0, vitalAcc: 0, vitalFlash: 0, spikeT: 0, inkT: 0,
       dashT: 0.18, dashCd: 0.9, counterT: 1.6, vanishFlash: 0.6,
     };
     burst(950, 436, 10, ['#dff2ff', '#9fd0ee', '#ffffff'], 170, 5);

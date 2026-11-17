@@ -12,21 +12,34 @@ const hash = (i, k) => ((i * 2654435761 + k * 40503) % 1000) / 1000;
 // --- the sky: a finer star field and two slow cloud bands ---
 export function drawSkyExtras(ctx, run, t) {
   ctx.fillStyle = '#dfeaf6';
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 24; i++) {
     const x = hash(i, 11) * 1280;
     const y = 8 + hash(i, 12) * 330;
     if (Math.hypot(x - MOON_X, y - MOON_Y) < 78) continue;
     ctx.globalAlpha = 0.12 + 0.3 * Math.abs(Math.sin(t * 0.5 + i * 2.3));
-    ctx.fillRect(x, y, 1.6, 1.6);
+    const s = i % 4 === 0 ? 2.4 : 1.6;
+    ctx.fillRect(x, y, s, s);
+    if (i % 6 === 0) { // a cross sparkle on the brightest few
+      ctx.fillRect(x - 2.2, y + s / 2 - 0.6, s + 4.4, 1.2);
+      ctx.fillRect(x + s / 2 - 0.6, y - 2.2, 1.2, s + 4.4);
+    }
   }
   ctx.globalAlpha = 1;
   // cloud silhouettes: flat dark banks sitting on the sky bands,
   // placed in the open sky the staging leaves bare — left of the
   // moon, right of the banner's column, low under the moon. Never
-  // on the moon, the callout column or a panel.
-  ctx.fillStyle = 'rgba(10,16,30,0.55)';
+  // on the moon, the callout column or a panel. A second, fainter
+  // pass rides inside each bank so the silhouette has weather in
+  // it instead of reading as one flat blob.
   const bank = (cx, cy, s) => {
+    ctx.fillStyle = 'rgba(10,16,30,0.55)';
     for (const [dx, dy, rx, ry] of [[-38, 3, 40, 8], [0, -3, 54, 11], [40, 3, 34, 7]]) {
+      ctx.beginPath();
+      ctx.ellipse(cx + dx * s, cy + dy * s, rx * s, ry * s, 0, 0, 6.29);
+      ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(24,32,54,0.35)';
+    for (const [dx, dy, rx, ry] of [[-16, -1, 30, 6], [22, 1, 24, 5]]) {
       ctx.beginPath();
       ctx.ellipse(cx + dx * s, cy + dy * s, rx * s, ry * s, 0, 0, 6.29);
       ctx.fill();
@@ -35,6 +48,40 @@ export function drawSkyExtras(ctx, run, t) {
   bank(118, 148, 0.9); // high left, under the goal bar, clear of the moon
   bank(872, 164, 1.05); // right of the banner column, left of the haul panel
   bank(404, 304, 0.8); // low under the moon, clear of the callouts
+  // thin wisps riding lower, where the sky is emptiest
+  ctx.fillStyle = 'rgba(16,24,44,0.4)';
+  for (const [wx, wy, wr] of [[170, 262, 58], [700, 352, 44]]) {
+    ctx.beginPath();
+    ctx.ellipse(wx, wy, wr, 4.5, 0, 0, 6.29);
+    ctx.fill();
+  }
+  // star clusters: loose knots of one-pixel stars, the fine grain
+  // that keeps open sky from reading as flat colour
+  ctx.fillStyle = '#dfeaf6';
+  for (const [cx, cy, seed] of [[452, 246, 81], [985, 250, 83]]) {
+    for (let i = 0; i < 5; i++) {
+      ctx.globalAlpha = 0.25 + hash(i, seed) * 0.4;
+      ctx.fillRect(cx + (hash(i, seed + 1) - 0.5) * 56, cy + (hash(i, seed + 2) - 0.5) * 30, 1.3, 1.3);
+    }
+  }
+  ctx.globalAlpha = 1;
+  // a shoreline village on the far ridge — roof silhouettes with
+  // lit windows, small with distance, riding the same ridge line
+  // render.js lays (its formula, so the houses sit ON the shore)
+  const ridgeY = (x) => WATER_Y - 46 - 26 * Math.sin(x * 0.004 + 2);
+  for (let i = 0; i < 6; i++) {
+    const hx = 596 + i * 21 + hash(i, 71) * 6;
+    const hw = 13 + hash(i, 72) * 6, hh = 7 + hash(i, 73) * 5;
+    const hy = ridgeY(hx) + 3;
+    ctx.fillStyle = '#070f1a';
+    ctx.fillRect(hx, hy - hh, hw, hh);
+    ctx.beginPath();
+    ctx.moveTo(hx - 1.5, hy - hh); ctx.lineTo(hx + hw / 2, hy - hh - 4.5); ctx.lineTo(hx + hw + 1.5, hy - hh);
+    ctx.fill();
+    ctx.fillStyle = '#ffca7a';
+    ctx.fillRect(hx + 2.5 + hash(i, 74) * 4, hy - hh + 2.5, 1.8, 2.2);
+    if (hash(i, 75) > 0.45) ctx.fillRect(hx + hw - 4.5, hy - hh + 2.5, 1.8, 2.2);
+  }
   // a low flock skimming the water far out, left of the callouts —
   // silhouette strokes, the same language as the horizon flock
   ctx.strokeStyle = 'rgba(10,18,32,0.8)';
@@ -57,22 +104,43 @@ function drawFoamAndSparkle(ctx, run, t) {
   ctx.strokeStyle = 'rgba(215,238,252,0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 17; i++) {
     const x = ((hash(i, 21) * 1340 - t * (9 + hash(i, 22) * 14)) % 1340 + 1340) % 1340 - 30;
     const y = WATER_Y + 18 + hash(i, 23) * 240;
     ctx.moveTo(x, y);
     ctx.lineTo(x + 7 + hash(i, 24) * 9, y);
   }
   ctx.stroke();
+  // dark flecks in the deep water — the same dash language read as
+  // shadow, so the surface has something under it, not just on it
+  ctx.strokeStyle = 'rgba(4,10,18,0.28)';
+  ctx.beginPath();
+  for (let i = 0; i < 7; i++) {
+    const x = ((hash(i, 27) * 1340 - t * (6 + hash(i, 28) * 9)) % 1340 + 1340) % 1340 - 30;
+    const y = WATER_Y + 120 + hash(i, 29) * 150;
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 10 + hash(i, 30) * 12, y);
+  }
+  ctx.stroke();
   // the third texture layer: fine sparkle, denser and smaller than dressing's
   ctx.fillStyle = '#e8f4ff';
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 15; i++) {
     const x = hash(i, 25) * 1280;
     const y = WATER_Y + 10 + hash(i, 26) * 268;
     ctx.globalAlpha = 0.03 + 0.1 * Math.abs(Math.sin(t * 1.7 + i * 2.9));
     ctx.fillRect(x, y, 1.7, 1.2);
   }
   ctx.globalAlpha = 1;
+  // a broken lace of foam riding the waterline itself — short pale
+  // dashes with hash gaps, so the surface edge reads as churned
+  // water meeting air, not a ruler line across the frame
+  ctx.fillStyle = 'rgba(226,243,255,0.4)';
+  for (let i = 0; i < 22; i++) {
+    if (hash(i, 35) < 0.3) continue;
+    const x = hash(i, 36) * 1260 + 6;
+    const y = WATER_Y + 2 + hash(i, 37) * 7;
+    ctx.fillRect(x, y, 5 + hash(i, 38) * 9, 1.6);
+  }
   // foam caps on the crests nearest the action — short bright arcs riding
   // the surface around wherever the lure is working
   if (run.phase === 'fight' || run.phase === 'wait') {
@@ -109,9 +177,9 @@ function drawSchool(ctx, t) {
 }
 
 function drawJellies(ctx, t) {
-  // one jellyfish keeping station in the Maw — flat shapes only (a
+  // jellyfish keeping station in the Maw — flat shapes only (a
   // glow disc costs real PNG bytes), the bell and falls drawn plain
-  for (const [jx, jy, s, ph] of [[420, 585, 21, 0]]) {
+  for (const [jx, jy, s, ph] of [[420, 585, 21, 0], [1096, 612, 14, 2.1]]) {
     const bob = Math.sin(t * 0.8 + ph) * 6;
     ctx.fillStyle = 'rgba(196,178,255,0.5)';
     ctx.beginPath();
@@ -142,11 +210,54 @@ function drawSeaweed(ctx, t) {
   }
 }
 
+// Shapes on the bottom the light barely reaches — a reef mass
+// shouldering up at the right, a rock shelf at the left, one
+// drowned mast standing between them. Flat and near-black: depth
+// read as silhouette, the poster's own language.
+function drawDeepShapes(ctx) {
+  ctx.fillStyle = 'rgba(5,11,20,0.5)';
+  ctx.beginPath(); // the reef, bottom right
+  ctx.moveTo(918, 720); ctx.lineTo(958, 668); ctx.lineTo(1018, 646);
+  ctx.lineTo(1084, 662); ctx.lineTo(1136, 640); ctx.lineTo(1180, 676);
+  ctx.lineTo(1196, 720); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); // the shelf, bottom left
+  ctx.moveTo(150, 720); ctx.lineTo(196, 692); ctx.lineTo(268, 686);
+  ctx.lineTo(330, 700); ctx.lineTo(352, 720); ctx.closePath(); ctx.fill();
+  ctx.fillRect(596, 636, 5, 84); // the mast, still standing
+  ctx.fillRect(578, 656, 42, 4);
+  ctx.beginPath(); // its fallen yard, leaning in the silt
+  ctx.moveTo(612, 720); ctx.lineTo(660, 668); ctx.lineTo(665, 672);
+  ctx.lineTo(620, 720); ctx.closePath(); ctx.fill();
+}
+
+// a ray gliding the deep water under the fight — one flat winged
+// silhouette on a slow patrol, there and gone like a shadow
+function drawRay(ctx, t) {
+  const rx = 470 + Math.sin(t * 0.07) * 60, ry = 612 + Math.sin(t * 0.23) * 5;
+  const flap = Math.sin(t * 1.3) * 5;
+  ctx.fillStyle = 'rgba(6,13,22,0.55)';
+  ctx.beginPath();
+  ctx.moveTo(rx - 34, ry + flap);
+  ctx.quadraticCurveTo(rx - 12, ry - 9 - flap * 0.4, rx, ry - 3);
+  ctx.quadraticCurveTo(rx + 12, ry - 9 - flap * 0.4, rx + 34, ry + flap);
+  ctx.quadraticCurveTo(rx + 10, ry + 7, rx, ry + 5);
+  ctx.quadraticCurveTo(rx - 10, ry + 7, rx - 34, ry + flap);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(6,13,22,0.55)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(rx + 30, ry + 2);
+  ctx.quadraticCurveTo(rx + 52, ry + 9, rx + 68, ry + 3);
+  ctx.stroke();
+}
+
 export function drawWaterLife(ctx, run, t) {
+  drawDeepShapes(ctx);
   drawFoamAndSparkle(ctx, run, t);
   drawDeepSwell(ctx, run, t);
   drawFrenzy(ctx, t);
   drawSchool(ctx, t);
+  drawRay(ctx, t);
   if (run.sea === 2) drawJellies(ctx, t);
   drawSeaweed(ctx, t);
 }
@@ -178,6 +289,15 @@ function drawDeepSwell(ctx, run, t) {
     const w = 14 + 26 * Math.abs(Math.sin(i * 1.7 + t * 0.9));
     ctx.fillRect(gx - w / 2 + Math.sin(i * 2.3 + t) * 7, y, w, 3);
   }
+  // micro-flecks inside the light path — the grain of the glint,
+  // tiny dashes that keep the column from reading as flat bars
+  for (let i = 0; i < 10; i++) {
+    const y = WATER_Y + 16 + hash(i, 91) * 240;
+    const x = gx + (hash(i, 92) - 0.5) * 56 + Math.sin(i * 2.3 + t) * 5;
+    ctx.globalAlpha = 0.1 + 0.16 * Math.abs(Math.sin(t * 1.3 + i * 1.9));
+    ctx.fillRect(x, y, 3.4, 1.3);
+  }
+  ctx.globalAlpha = 1;
 }
 
 // A bait ball boiling in the lantern light under the dock — little
@@ -281,7 +401,74 @@ export function drawSurfaceDressing(ctx, run, t) {
   ctx.fillRect(62, WATER_Y - 86, 4, 20);
   ctx.fillStyle = 'rgba(230,238,244,0.8)';
   ctx.beginPath(); ctx.arc(64, WATER_Y - 89, 2, 0, 6.29); ctx.fill();
+  drawShoreLife(ctx, t);
   drawDraftBackdrop(ctx, run, t);
+}
+
+// --- the shore, inhabited: shrine island, boats, sea stacks ---
+// Things, not just texture: a torii standing on its island off
+// the dock's end, fishing boats working the water near and far,
+// rock teeth in the surf off the headland. All silhouette with
+// one or two lit details apiece — the poster's economy.
+function drawShoreLife(ctx, t) {
+  // the shrine island: a low mound, a torii, one pine
+  ctx.fillStyle = '#060d18';
+  ctx.beginPath();
+  ctx.moveTo(296, WATER_Y + 3);
+  ctx.quadraticCurveTo(348, WATER_Y - 9, 400, WATER_Y + 3);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(330, WATER_Y - 26, 3.4, 19); ctx.fillRect(360, WATER_Y - 26, 3.4, 19);
+  ctx.fillRect(322, WATER_Y - 30, 48, 3.6); // the kasagi, top lintel
+  ctx.fillRect(327, WATER_Y - 22.5, 38, 2.8); // the shimaki under it
+  ctx.fillRect(345, WATER_Y - 22.5, 2.6, 6);
+  ctx.beginPath(); ctx.ellipse(382, WATER_Y - 12, 11, 6, 0, 0, 6.29); ctx.fill();
+  ctx.fillRect(381, WATER_Y - 8, 2, 6);
+  ctx.fillStyle = 'rgba(220,242,255,0.45)'; // foam worrying its foot
+  ctx.fillRect(308, WATER_Y + 3, 8, 1.8); ctx.fillRect(360, WATER_Y + 4, 10, 1.8);
+  ctx.fillRect(338, WATER_Y + 5, 6, 1.6);
+  // a fishing boat far out, small in the open water — hull, mast,
+  // one lantern burning amber, and its glint laid on the swell
+  ctx.fillStyle = '#081120';
+  ctx.beginPath();
+  ctx.moveTo(796, WATER_Y + 1); ctx.lineTo(802, WATER_Y - 5);
+  ctx.lineTo(832, WATER_Y - 5); ctx.lineTo(838, WATER_Y + 1);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(815, WATER_Y - 19, 2, 14);
+  ctx.fillStyle = '#ffca7a';
+  ctx.beginPath(); ctx.arc(816, WATER_Y - 21, 1.8, 0, 6.29); ctx.fill();
+  ctx.fillStyle = 'rgba(255,190,100,0.16)';
+  ctx.fillRect(806, WATER_Y + 6, 20, 2);
+  // a nearer boat riding the lower water: hull, cabin, a
+  // fisherman sitting his watch, a lantern at the bow
+  const by = WATER_Y + 148 + Math.sin(t * 1.1) * 2;
+  ctx.fillStyle = '#0a1624';
+  ctx.beginPath();
+  ctx.moveTo(872, by); ctx.lineTo(880, by + 10); ctx.lineTo(936, by + 10);
+  ctx.lineTo(946, by); ctx.lineTo(938, by - 3); ctx.lineTo(880, by - 3);
+  ctx.closePath(); ctx.fill();
+  ctx.fillRect(892, by - 9, 16, 7); // cabin
+  ctx.beginPath(); ctx.arc(926, by - 8, 2.6, 0, 6.29); ctx.fill(); // his head
+  ctx.fillRect(924, by - 6, 4.4, 5); // his shoulders
+  ctx.fillRect(878, by - 13, 2, 11); // the bow lantern pole
+  ctx.fillStyle = '#ffca7a';
+  ctx.beginPath(); ctx.arc(879, by - 15, 1.9, 0, 6.29); ctx.fill();
+  ctx.fillStyle = 'rgba(255,190,100,0.15)';
+  ctx.fillRect(868, by + 14, 22, 2); // the lantern's glint
+  ctx.fillStyle = 'rgba(220,242,255,0.5)'; // foam at her waterline
+  ctx.fillRect(884, by + 11, 9, 1.8); ctx.fillRect(916, by + 12, 11, 1.8);
+  // sea stacks off the headland — rock teeth standing in the surf
+  ctx.fillStyle = '#060d18';
+  ctx.beginPath();
+  ctx.moveTo(1070, WATER_Y + 30); ctx.lineTo(1078, WATER_Y - 24);
+  ctx.lineTo(1092, WATER_Y - 34); ctx.lineTo(1106, WATER_Y - 20);
+  ctx.lineTo(1114, WATER_Y + 30); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(1198, WATER_Y + 26); ctx.lineTo(1206, WATER_Y - 14);
+  ctx.lineTo(1218, WATER_Y - 20); ctx.lineTo(1228, WATER_Y - 8);
+  ctx.lineTo(1232, WATER_Y + 26); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(220,242,255,0.45)';
+  ctx.fillRect(1076, WATER_Y + 4, 9, 1.8); ctx.fillRect(1098, WATER_Y + 6, 8, 1.8);
+  ctx.fillRect(1204, WATER_Y + 3, 8, 1.8);
 }
 
 // --- the draft's backdrop: a second sea behind the salvage panel ---
@@ -345,6 +532,31 @@ function drawDraftBackdrop(ctx, run, t) {
 
 // --- the dock, dressed: lantern, crates, rope, flag ---
 export function drawDockDetail(ctx, run, t) {
+  // the deck's wood, read up close: seams between the planks
+  // render.js lays, a grain streak running each plank's length,
+  // nail heads at the post tops — flat lines over the flat wood
+  ctx.strokeStyle = 'rgba(8,5,2,0.55)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) { // seams where one plank meets the next
+    const x = 28 + i * 41 + 38;
+    ctx.moveTo(x, 412); ctx.lineTo(x, 425);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(196,152,96,0.28)';
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) { // grain, never the full plank twice alike
+    const x = 32 + i * 41, y = 417 + hash(i, 51) * 5;
+    ctx.moveTo(x, y); ctx.lineTo(x + 20 + hash(i, 52) * 12, y);
+  }
+  ctx.stroke();
+  ctx.fillStyle = 'rgba(10,6,3,0.8)';
+  for (const px of [50, 244]) ctx.fillRect(px, 418, 2.4, 2.4); // nail heads
+  ctx.strokeStyle = 'rgba(150,112,64,0.3)'; // grain down the two posts
+  ctx.beginPath();
+  ctx.moveTo(49, 432); ctx.lineTo(50, 486);
+  ctx.moveTo(245, 432); ctx.lineTo(244, 486);
+  ctx.stroke();
   // crates stacked at the dock's left end
   ctx.fillStyle = '#2a1e12';
   ctx.fillRect(84, 388, 28, 26); ctx.fillRect(112, 396, 24, 18);
@@ -473,17 +685,22 @@ export function drawFightFx(ctx, run, t) {
     ctx.lineTo(p.x + Math.cos(a) * len, WATER_Y + 3 + Math.sin(a) * len);
     ctx.stroke();
   }
-  // the stamina state, large, where the fight is
-  const word = staminaWord(f.stamina);
-  const wc = word === 'FRESH' ? '#ff8a7a' : word === 'SPENT' ? '#39d353' : '#ffd94d';
-  ctx.font = "800 25px system-ui, 'Segoe UI', sans-serif";
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillStyle = wc;
-  ctx.fillText(word, calloutX(run), WATER_Y - 64);
+  // the stamina state, large, where the fight is — but when the
+  // VANISH shout is up the column carries that one word alone:
+  // the strip below already names the state, and two words stacked
+  // on the water shout over the scene
+  const lines = calloutLines(f);
+  if (!lines.vanish) {
+    const word = staminaWord(f.stamina);
+    const wc = word === 'FRESH' ? '#ff8a7a' : word === 'SPENT' ? '#39d353' : '#ffd94d';
+    ctx.font = "800 25px system-ui, 'Segoe UI', sans-serif";
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = wc;
+    ctx.fillText(word, calloutX(run), WATER_Y - 64);
+  }
   // the surge, named when it comes — on its own line of the callout
   // column, clear of the word below and of VITAL! (see calloutLines)
-  const lines = calloutLines(f);
   if (lines.thrash) {
     ctx.save();
     ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 10);
