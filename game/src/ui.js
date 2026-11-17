@@ -85,8 +85,8 @@ function drawBoonPips(ctx, run, x, y, withLabel = true) {
 export function drawHUD(ctx, run, view) {
   // ONE compact panel at the top-left corner holds the run's vitals —
   // coin, combo, score, night, level, bestiary in a two-column grid.
-  // The rest of the top edge is open sky: goal and location ride as
-  // small chips on the same row, and nothing spans the frame.
+  // The rest of the top edge is open sky but for the location chip;
+  // the goal rides as a chip at the bottom-left, above the fight strip.
   panel(ctx, 16, 14, 296, 102, 0.78);
   text(ctx, `🪙 ${run.coins}`, 32, 48, 23, '#ffd94d');
   const comboScale = view.comboPop > 0 ? 1 + 0.45 * view.comboPop : 1;
@@ -117,8 +117,8 @@ export function drawHUD(ctx, run, view) {
   cell(180, 106, 'BESTIARY', `${journalCount(run)}/13`, '#ffe9a8');
   const goalStr = `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`;
   ctx.font = F(20);
-  panel(ctx, 328, 14, ctx.measureText(goalStr).width + 32, 36, 0.66);
-  text(ctx, goalStr, 344, 38, 20, '#ffe9a8');
+  panel(ctx, 16, 598, ctx.measureText(goalStr).width + 32, 36, 0.66);
+  text(ctx, goalStr, 32, 622, 20, '#ffe9a8');
   const locStr = `${SEAS[run.sea].name} • ${WEATHERS[run.weatherIdx].name}`;
   const locW = ctx.measureText(locStr).width + 32;
   panel(ctx, 1264 - locW, 14, locW, 36, 0.66);
