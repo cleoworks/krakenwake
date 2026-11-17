@@ -9,7 +9,7 @@ import { drawBoonGlyph } from './glyphs.js';
 
 // one-line effects for the boon rows — full text lives on the draft cards
 const SHORT_FX = {
-  cable: 'wider safe band', winch: '+25% haul speed', chum: 'bites 20% faster',
+  cable: 'wider safe band', winch: '+25% haul speed', chum: 'answers 20% faster',
   aperture: '+50% strike window', charm: 'a snap keeps the combo', grip: 'stamina regens at half',
   glow: 'rares answer more often', sails: 'weather penalties halved', sinkers: 'hauls pay +10%',
 };
@@ -102,7 +102,7 @@ export function drawCamp(ctx, run) {
   });
   const { rows, hunt } = campLayout(run);
   text(ctx, 'HARPOONS — haul speed & grip', 852, 130, 19, '#aee6ff');
-  text(ctx, 'LURES — what bites, how fast', 852, 282, 19, '#aee6ff');
+  text(ctx, 'BAITS — what answers, how fast', 852, 282, 19, '#aee6ff');
   text(ctx, 'SEAS — darker water, worse monsters', 852, 477, 19, '#aee6ff');
   for (const r of rows) {
     ctx.fillStyle = r.active ? 'rgba(46,139,87,0.55)' : 'rgba(255,255,255,0.06)';

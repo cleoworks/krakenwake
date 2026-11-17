@@ -14,7 +14,7 @@ function monsterGeom(run) {
   const f = run.fight;
   const p = lurePos(run);
   const near = Math.max(0, 1 - f.dist / 95);
-  if (MONSTERS[f.mi].shape === 'wyrm') return { x: p.x, y: WATER_Y + 6, s: 150 + near * 45, wyrm: true };
+  if (MONSTERS[f.mi].shape === 'wyrm') return { x: p.x, y: WATER_Y + 22, s: 150 + near * 45, wyrm: true };
   return { x: p.x, y: WATER_Y - 4 - near * 12, s: 20 + near * 30 + MONSTERS[f.mi].bulk, wyrm: false };
 }
 function weakPointPos(run) {
@@ -118,9 +118,24 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1) {
   ctx.beginPath();
   [...L, ...R.reverse()].forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
   ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = 'rgba(46,26,4,0.55)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
-  for (let i = 3; i < S.length - 3; i += 7) { // scale bands across the back
-    ctx.beginPath(); ctx.moveTo(L[i][0], L[i][1]); ctx.lineTo(R[i][0], R[i][1]); ctx.stroke();
+  // scale bands across the back — bowed along the curve and spaced by
+  // arc length, each a dark seam with a lit lip, never a straight slash
+  ctx.lineCap = 'round';
+  let acc = 0;
+  for (let i = 2; i < S.length - 2; i++) {
+    acc += Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1]);
+    if (acc < 48) continue;
+    acc = 0;
+    const a = S[i - 1], b = S[i + 1];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+    const w = Math.hypot(L[i][0] - R[i][0], L[i][1] - R[i][1]) / 2;
+    const mx = (L[i][0] + R[i][0]) / 2 + dx * w * 0.38, my = (L[i][1] + R[i][1]) / 2 + dy * w * 0.38;
+    ctx.strokeStyle = 'rgba(46,26,4,0.55)'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(L[i][0], L[i][1]); ctx.quadraticCurveTo(mx, my, R[i][0], R[i][1]); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,226,150,0.30)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(L[i][0] - dx * 3, L[i][1] - dy * 3);
+    ctx.quadraticCurveTo(mx - dx * 3, my - dy * 3, R[i][0] - dx * 3, R[i][1] - dy * 3); ctx.stroke();
   }
   ctx.strokeStyle = 'rgba(255,226,150,0.7)'; ctx.lineWidth = 2;
   ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
@@ -147,22 +162,30 @@ function drawWyrmTheatre(ctx, run, t) {
     [g.x - g.s * 0.70, W + 6], [g.x - g.s * 1.12, W - g.s * 0.13 + bob], [g.x - g.s * 1.52, W + 4],
   ], g.s * 0.17, g.s * 0.10, 0.4, 0.05); // narrows into his flank; dives to a point at the collar
   loopRibbon(ctx, [
-    [g.x - g.s * 1.94, W + 4], [g.x - g.s * 2.42, W - g.s * 0.07 + bob], [336, 398], [272, 394],
+    [g.x - g.s * 1.94, W + 4], [g.x - g.s * 2.42, W - g.s * 0.07 + bob],
+    [(g.x - g.s * 2.42 + 336) / 2, W - 6 + bob], // a shallow sag in the long
+    [336, 398], [272, 394], // run to the post — a swimming back, not a slide
   ], g.s * 0.09, g.s * 0.06, 0.05, 1); // rises from a point; the post
   foamCollar(ctx, g.x - g.s * 1.52, W + 3, g.s * 0.16);
   foamCollar(ctx, g.x - g.s * 1.94, W + 3, g.s * 0.14);
   ctx.lineCap = 'round';
-  for (let i = 0; i < 3; i++) { // the coil: thick bands stepping down the
-    const cy = 397 + i * 13, rx = 14 - i, ry = 5.5 + i * 0.5; // post, lit on top
-    ctx.strokeStyle = GOLD.water;
-    ctx.lineWidth = Math.max(6, g.s * 0.09);
-    ctx.beginPath();
-    ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, 0, 6.29);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(243,226,179,0.4)';
+  for (let i = 0; i < 3; i++) { // the coil: three wraps stepping down the
+    const cy = 397 + i * 13, rx = 14 - i, ry = 5.5 + i * 0.5; // post — each
+    const wMax = Math.max(6, g.s * 0.09); // a WRAP, not a ring: three arc
+    // passes around the post's front, fat at the front, thinning to
+    // nothing where they tuck behind the post's sides. (Full ellipses
+    // stacked like sausage slices — the blunt look the owner flagged.)
+    for (const [a0, a1, wf] of [[0.03, 0.35, 0.38], [0.35, 0.65, 1], [0.65, 0.97, 0.38]]) {
+      ctx.strokeStyle = GOLD.water;
+      ctx.lineWidth = Math.max(1.8, wMax * wf);
+      ctx.beginPath();
+      ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, Math.PI * a0, Math.PI * a1);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(243,226,179,0.4)'; // the wrap's lit top rim
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, 3.4, 5.9);
+    ctx.ellipse(264 - i * 1.5, cy - ry * 0.55, rx * 0.92, ry * 0.5, 0, Math.PI * 1.12, Math.PI * 1.88);
     ctx.stroke();
   }  // the slam, telegraphed: the head itself rears (render.js) — here the
   // water under it warns, a red ring widening as the strike nears

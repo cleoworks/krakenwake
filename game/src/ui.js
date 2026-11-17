@@ -123,9 +123,9 @@ export function drawHUD(ctx, run, view) {
       text(ctx, '!', p.x, WATER_Y - 66, 64, '#ffd94d', 'center', 800);
       text(ctx, 'STRIKE! [SPACE]', 640, 640, 44, '#ffd94d', 'center', 800);
     } else if (run.wait.telegraph) {
-      text(ctx, 'Something is circling the lure…', 640, 640, 26, '#aee6ff', 'center');
+      text(ctx, 'Something is circling below…', 640, 640, 26, '#aee6ff', 'center');
     } else {
-      text(ctx, 'The lure is out. Watch the water…', 640, 640, 24, '#8fb8d4', 'center');
+      text(ctx, 'The bait is out. Watch the water…', 640, 640, 24, '#8fb8d4', 'center');
     }
   } else if (run.phase === 'fight' && run.fight) {
     const f = run.fight;

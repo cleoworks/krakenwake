@@ -212,7 +212,7 @@ function drawMonster(ctx, run, t) {
       const maw = Math.min(1, Math.max(0, (surge01 - 0.78) / 0.22) * 1.3);
       const rear = f.event && f.event.id === 'slam' && f.event.phase === 'tele'
         ? Math.min(1, Math.max(0, 1 - f.event.t / 1.0)) : 0;
-      drawWyrm(ctx, p.x, WATER_Y + 6, 150 + near * 45, t, '#ff5040', maw, rear);
+      drawWyrm(ctx, p.x, WATER_Y + 22, 150 + near * 45, t, '#ff5040', maw, rear);
     } else {
       const s = 20 + near * 30 + m.bulk;
       const bob = Math.sin(t * 2.2) * 3;

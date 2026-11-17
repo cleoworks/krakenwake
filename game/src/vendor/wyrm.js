@@ -71,46 +71,83 @@ function ribbon(ctx, s, rear) {
     L.push([S[i][0] - dy * S[i][2], S[i][1] + dx * S[i][2]]);
     R.push([S[i][0] + dy * S[i][2], S[i][1] - dx * S[i][2]]);
   }
+  const SUB = 8;
+  const frameAt = (si) => {
+    const a = S[Math.max(0, si - 1)], b = S[Math.min(S.length - 1, si + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1;
+    return { dx: dx / m, dy: dy / m };
+  };
+  // THE DIVE RULE: the body is clipped at the surface line — nothing
+  // of the king shows below it, so no coil bottom, fin tip or belly
+  // edge can end in a visible cut down in the water. Every stretch
+  // dives at the line and the foam collars (drawWyrm) mark the spots.
+  ctx.save();
+  ctx.beginPath(); ctx.rect(-s * 1.2, -s * 2.6, s * 3.8, s * 2.6 + s * 0.035); ctx.clip();
   poly(ctx, [...L, ...R.reverse()], BASE);
   // pale-gold light along the top edge, amber shade along the belly edge
   ctx.strokeStyle = 'rgba(255,226,150,0.9)'; ctx.lineWidth = Math.max(2, s * 0.024);
   ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
   ctx.strokeStyle = 'rgba(110,70,18,0.65)'; ctx.lineWidth = Math.max(1.6, s * 0.02);
   ctx.beginPath(); L.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+  // scale bands across the COILS: seams bowed along the curve, spaced
+  // by arc length — the segmentation that stops a dome reading as a
+  // smooth hill. Each band is a dark seam with a lit lip on its
+  // head-side, like one plate overlapping the next.
+  const bandAt = (si) => {
+    const f = frameAt(si), th = S[si][2];
+    const bow = th * 0.38;
+    ctx.strokeStyle = shade(BASE, 0.55); ctx.lineWidth = Math.max(1.3, s * 0.016);
+    ctx.beginPath(); ctx.moveTo(L[si][0], L[si][1]);
+    ctx.quadraticCurveTo((L[si][0] + R[si][0]) / 2 + f.dx * bow, (L[si][1] + R[si][1]) / 2 + f.dy * bow, R[si][0], R[si][1]);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,226,150,0.35)'; ctx.lineWidth = Math.max(1, s * 0.008);
+    ctx.beginPath(); ctx.moveTo(L[si][0] - f.dx * s * 0.035, L[si][1] - f.dy * s * 0.035);
+    ctx.quadraticCurveTo((L[si][0] + R[si][0]) / 2 + f.dx * (bow - s * 0.035), (L[si][1] + R[si][1]) / 2 + f.dy * (bow - s * 0.035),
+      R[si][0] - f.dx * s * 0.035, R[si][1] - f.dy * s * 0.035);
+    ctx.stroke();
+  };
+  let acc = 0;
+  for (let si = 6; si < NECK * SUB - 2; si++) {
+    acc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (acc >= s * 0.60) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
+  }
   // features ride the CONTROL points but take position and direction
   // from the smoothed curve (sample 8 per segment)
-  const SUB = 8;
   const frame = (ci) => {
     const si = Math.min(S.length - 1, ci * SUB);
-    const a = S[Math.max(0, si - 1)], b = S[Math.min(S.length - 1, si + 1)];
-    let dx = b[0] - a[0], dy = b[1] - a[1];
-    const m = Math.hypot(dx, dy) || 1;
-    return { p: S[si], l: L[si], dx: dx / m, dy: dy / m };
+    const f = frameAt(si);
+    return { p: S[si], l: L[si], dx: f.dx, dy: f.dy };
   };
-  ctx.strokeStyle = shade(BASE, 0.6); ctx.lineWidth = Math.max(1, s * 0.013);
-  for (const ci of [2, 3]) { // scale ridges on the coils — arcs opening
-    // DOWN, so they read as plate ridges, never as a smile
-    const f = frame(ci);
-    ctx.beginPath(); ctx.arc(f.p[0], f.p[1], ctrl[ci][2] * 0.62, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
-  }
   for (let ci = 1; ci < ctrl.length - 1; ci++) {
     const f = frame(ci);
-    const bx = f.p[0] + f.dy * ctrl[ci][2] * 0.9, by = f.p[1] - f.dx * ctrl[ci][2] * 0.9;
     if (ci >= NECK || ci % 2 === 1) { // dorsal spines; on the neck they
-      // lengthen and lean back along the curve — a bronze mane
+      // lengthen and lean back along the curve — a bronze mane. A spine
+      // whose base sits at the surface or whose tip would end under it
+      // is never drawn: underwater fins were the blunt triangles.
       const big = (ci >= NECK ? 0.34 : 0.13) * s;
       const lean = ci >= NECK ? -0.55 : 0.04;
-      poly(ctx, [[bx - f.dx * s * 0.07, by - f.dy * s * 0.07], [bx + f.dx * s * 0.07, by + f.dy * s * 0.07],
-        [bx + f.dy * big + f.dx * big * lean, by - f.dx * big + f.dy * big * lean]], ci % 2 ? BRONZE : shade(BRONZE, 0.8));
+      const bx = f.p[0] + f.dy * ctrl[ci][2] * 0.78, by = f.p[1] - f.dx * ctrl[ci][2] * 0.78;
+      const tip = [bx + f.dy * big + f.dx * big * lean, by - f.dx * big + f.dy * big * lean];
+      if (by < -0.04 * s && tip[1] < 0.02 * s) {
+        const hw = s * 0.085; // a wide base, sunk deep — grown, not pasted
+        poly(ctx, [[bx - f.dx * hw, by - f.dy * hw], [bx + f.dx * hw, by + f.dy * hw], tip], shade(BRONZE, 0.72));
+        poly(ctx, [[bx - f.dx * hw * 0.55, by - f.dy * hw * 0.55], [bx + f.dx * hw * 0.55, by + f.dy * hw * 0.55],
+          [bx + (tip[0] - bx) * 0.62, by + (tip[1] - by) * 0.62]], ci % 2 ? BRONZE : shade(BRONZE, 0.85));
+      }
     }
-    if (ci >= NECK) { // a belly plate: a cream band partway across the
-      // neck's front, laid along the curve — segmentation, not bricks
-      const g = 0.06 * s;
-      const m = [f.l[0] + (f.p[0] - f.l[0]) * 0.62, f.l[1] + (f.p[1] - f.l[1]) * 0.62];
+    if (ci >= NECK) { // a belly plate: a cream band across the neck's
+      // front, laid along the curve, its lower edge shaded so each
+      // plate reads as overlapping the next — segmentation, not bricks
+      const g = 0.095 * s;
+      const m = [f.l[0] + (f.p[0] - f.l[0]) * 0.8, f.l[1] + (f.p[1] - f.l[1]) * 0.8];
       poly(ctx, [f.l, m, [m[0] + f.dx * g, m[1] + f.dy * g],
         [f.l[0] + f.dx * g, f.l[1] + f.dy * g]], 'rgba(243,226,179,0.9)');
+      ctx.strokeStyle = 'rgba(138,90,30,0.55)'; ctx.lineWidth = Math.max(1, s * 0.01);
+      ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.lineTo(m[0] + f.dx * g, m[1] + f.dy * g); ctx.stroke();
     }
   }
+  ctx.restore();
   return ctrl;
 }
 
@@ -132,9 +169,12 @@ function head(ctx, s, K, hx, hy, maw, rear) {
   poly(ctx, [[0.10, -0.13], [0.36, -0.34], [0.17, -0.06]].map(p => [p[0] * s, p[1] * s]), BRONZE); // horn, swept back
   poly(ctx, [[0.02, -0.15], [0.22, -0.42], [0.09, -0.05]].map(p => [p[0] * s, p[1] * s]), shade(BRONZE, 0.8));
   poly(ctx, [[0.13, 0.02], [0.27, 0.06], [0.12, 0.10]].map(p => [p[0] * s, p[1] * s]), BRONZE); // cheek spike
-  poly(ctx, [[0.16, -0.10], [-0.05, -0.17], [-0.34, -0.12], [-0.48, -0.03], [-0.40, 0.05], [0.02, 0.07], [0.16, 0.03]]
-    .map(p => [p[0] * s, p[1] * s]), AMBER); // the skull, deep amber
-  poly(ctx, [[0.16, -0.10], [-0.05, -0.17], [-0.34, -0.12], [-0.05, -0.08]].map(p => [p[0] * s, p[1] * s]), shade(BASE, 1.3)); // lit crown
+  poly(ctx, [[0.16, -0.10], [-0.05, -0.17], [-0.34, -0.12], [-0.48, -0.03], [-0.40, 0.05], [0.02, 0.07], [0.20, 0.05]]
+    .map(p => [p[0] * s, p[1] * s]), AMBER); // the skull, deep amber — its rear
+  // runs long so the skull overlaps the neck top and the join blends
+  poly(ctx, [[0.16, -0.10], [-0.05, -0.17], [-0.34, -0.12], [-0.20, -0.062], [-0.02, -0.072]]
+    .map(p => [p[0] * s, p[1] * s]), shade(BASE, 1.3)); // lit crown — its lower
+  // edge BOWS with the skull instead of cutting straight across it
   K.teeth(-0.45, 0.03, 2, 0.10, 0.055); // upper fangs
   K.slitEye(-0.20, -0.05, 0.085); // the red eye under its brow
   ctx.strokeStyle = '#2a1804'; ctx.lineWidth = Math.max(1.2, s * 0.022);
@@ -154,8 +194,17 @@ export function drawWyrm(ctx, x, y, s, t, color = '#ff5a4e', maw = 0, rear = 0) 
   ctx.save(); ctx.translate(x, y);
   const ctrl = ribbon(ctx, s, rear);
   // a small tail fin breaks the surface where the body runs out —
-  // the far end of the king, swept back like his horns, in his gold
-  poly(ctx, [[ctrl[0][0] - s * 0.02, 3], [ctrl[0][0] + s * 0.15, 2], [ctrl[0][0] + s * 0.03, -s * 0.13]], shade(BASE, 1.15));
+  // the far end of the king, swept back like his horns, in his gold.
+  // A crescent, not a wedge: its base dives INTO the ribbon's top
+  // edge, so no straight join line shows where fin meets body.
+  const fx = ctrl[0][0];
+  ctx.fillStyle = shade(BASE, 1.15);
+  ctx.beginPath();
+  ctx.moveTo(fx - s * 0.13, s * 0.015);
+  ctx.quadraticCurveTo(fx - s * 0.02, -s * 0.10, fx + s * 0.10, -s * 0.155);
+  ctx.quadraticCurveTo(fx + s * 0.16, -s * 0.10, fx + s * 0.145, s * 0.015);
+  ctx.quadraticCurveTo(fx, -s * 0.035, fx - s * 0.13, s * 0.015);
+  ctx.closePath(); ctx.fill();
   const hp = ctrl[ctrl.length - 1];
   const hs = s * 1.25; // the head out-sizes the neck — the profile is the poster
   const KH = makeKit(ctx, hs, BASE, color);

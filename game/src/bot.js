@@ -1,6 +1,6 @@
 // bot.js — one job: the policy that plays the loop. The title-screen attract
 // demo and the seeded proof in tools/bot-test.mjs both drive the game with
-// this. It plays like a decent hunter: full-ish casts, strikes on the bite,
+// this. It plays like a decent hunter: full-ish throws, strikes on the answer,
 // pulse-hauls a fresh monster to tire it out, then hauls hard once it fades,
 // and dashes through telegraphs to open counter windows.
 import { MONSTERS, SEAS, poolFor } from './data.js';
@@ -73,7 +73,7 @@ export function botDraft(run) {
   return pickBoon(run, run.draft.choices[0]);
 }
 
-// Between casts: spend coins in a fixed priority and sail to the deepest open
+// Between throws: spend coins in a fixed priority and sail to the deepest open
 // sea that still hides an uncaught monster. The King Wyrm only answers
 // the Doom Bell, so the bell is bought and rung whenever the Maw is the hunt.
 export function botShop(run) {

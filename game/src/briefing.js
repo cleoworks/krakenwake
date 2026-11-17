@@ -122,7 +122,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   });
 
   text(ctx, 'DIFFICULTY', 40, 464, 18, '#8fb8d4', 'left', 800);
-  text(ctx, '🔔 The King Wyrm answers only to the Doom Bell lure — buy it at camp, ring it in Wyrm\'s Maw.', 190, 464, 14, '#ffd94d', 'left', 400);
+  text(ctx, '🔔 The King Wyrm answers only to the Doom Bell — buy it at camp, ring it in Wyrm\'s Maw.', 190, 464, 14, '#ffd94d', 'left', 400);
   const { diffs, sail } = briefingLayout();
   for (const d of diffs) {
     const def = DIFFICULTIES[d.idx];

@@ -76,7 +76,7 @@ function startWait(run) {
   const lure = LURES[run.lure];
   const weather = WEATHERS[run.weatherIdx];
   // Storm Sails halves a weather penalty (a bite factor above 1); Blood
-  // Chum shaves a fifth off every wait.
+  // Blood Bait shaves a fifth off every wait.
   let wBite = weather.bite;
   if (hasBoon(run, 'sails') && wBite > 1) wBite = 1 + (wBite - 1) / 2;
   const biteIn = run.rng.range(1.6, 4.2) * lure.bite * wBite * (hasBoon(run, 'chum') ? 0.8 : 1);
@@ -101,7 +101,7 @@ function haul(run) {
   const f = run.fight;
   const m = MONSTERS[f.mi];
   const comboMult = 1 + 0.1 * run.combo;
-  // a haul pays the species' price; Heavy Sinkers sweeten every haul
+  // a haul pays the species' price; Heavy Chain sweetens every haul
   const sinkersMult = hasBoon(run, 'sinkers') ? 1.1 : 1;
   const gained = Math.round(m.price * comboMult * sinkersMult);
   // SCORE is its own currency: haul value x combo x difficulty.

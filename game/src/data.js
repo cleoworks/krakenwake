@@ -17,7 +17,7 @@ export const HARPOONS = [
 
 export const LURES = [
   { name: 'Bait Bucket', price: 0, bite: 1.0, doom: false },
-  { name: 'Blood Lure', price: 60, bite: 0.82, doom: false },
+  { name: 'Blood Vial', price: 60, bite: 0.82, doom: false },
   { name: 'Lantern Squid', price: 80, bite: 0.7, doom: false },
   { name: 'Doom Bell', price: 100, bite: 0.85, doom: true },
 ];
@@ -31,10 +31,10 @@ export const WEATHERS = [
 ];
 
 // sea: index into SEAS. power: how hard it pulls in a fight. weight: how often
-// it bites. price: what a haul pays before the combo multiplier. bulk: the
+// it answers. price: what a haul pays before the combo multiplier. bulk: the
 // species' fixed build — how big it looms in the water and how wide its
-// reflection shimmers (there is no per-catch size roll; a species is its size).
-// fake: how much it loves a fake bite. doom: only answers the Doom Bell.
+// reflection shimmers (there is no per-haul size roll; a species is its size).
+// fake: how much it loves to feint. doom: only answers the Doom Bell.
 export const MONSTERS = [
   { name: 'Gloam Eel', sea: 0, power: 21, weight: 30, price: 18, bulk: 1.0, fake: 0.2, doom: false, shape: 'eel', color: '#57e6a9' },
   { name: 'Hullback Crab', sea: 0, power: 25, weight: 26, price: 22, bulk: 1.4, fake: 0.1, doom: false, shape: 'crab', color: '#e8834f' },
@@ -68,13 +68,13 @@ export const DIFFICULTIES = [
 export const BOONS = [
   { id: 'cable', code: 'RC', name: 'Reinforced Chain', desc: 'The safe tension band widens — the chain holds deeper into the red.' },
   { id: 'winch', code: 'BW', name: 'Brass Coil', desc: '+25% haul speed on every throw you make.' },
-  { id: 'chum', code: 'BC', name: 'Blood Bait', desc: 'Monsters find the lure 20% faster, every night.' },
+  { id: 'chum', code: 'BC', name: 'Blood Bait', desc: 'Monsters find the bait 20% faster, every night.' },
   { id: 'aperture', code: 'WA', name: 'Wide Aperture', desc: 'The strike window stays open 50% longer.' },
   { id: 'charm', code: 'SC', name: "Sailor's Charm", desc: 'Once per night, a snapped chain does not break your combo.' },
   { id: 'grip', code: 'IG', name: 'Iron Grip', desc: 'Monster stamina regens at half speed while you slacken.' },
-  { id: 'glow', code: 'GB', name: 'Glow Bait', desc: 'Rare monsters answer the lure far more often.' },
-  { id: 'sails', code: 'SS', name: 'Storm Sails', desc: 'Weather penalties on the bite are halved.' },
-  { id: 'sinkers', code: 'HS', name: 'Heavy Chain', desc: 'The big ones take the lure: every haul pays +10% coins and score.' },
+  { id: 'glow', code: 'GB', name: 'Glow Bait', desc: 'Rare monsters answer the bait far more often.' },
+  { id: 'sails', code: 'SS', name: 'Storm Sails', desc: 'Weather penalties on the hunt are halved.' },
+  { id: 'sinkers', code: 'HS', name: 'Heavy Chain', desc: 'The big ones take the bait: every haul pays +10% coins and score.' },
 ];
 export const boonById = (id) => BOONS.find((b) => b.id === id);
 
