@@ -1,89 +1,59 @@
-// bot.js — the autopilot policy. It hunts by the exact human rules: same
-// strike window, same tension physics. It powers the title-screen attract
-// demo and the seeded season proof (tools/bot-test.mjs).
-import { RODS, BAITS, LOCATIONS } from './data.js';
-import { buyRod, buyBait, travelTo, poolMissing } from './fishing.js';
-
-// The shopping list, in order: gear up, then unlock darker water.
-const BUY_ORDER = [
-  ['rod', 1], ['bait', 2], ['loc', 1], ['rod', 2], ['bait', 3], ['loc', 2],
-];
+// bot.js — one job: the policy that plays the loop. The title-screen attract
+// demo and the seeded proof in tools/bot-test.mjs both drive the game with
+// this. It plays like a decent hunter: full-ish casts, strikes on the bite,
+// reels under the yellow and slacks off before the cable pops.
+import { MONSTERS, SEAS, poolFor } from './data.js';
+import { buyEquip } from './fishing.js';
 
 export function makeBot() {
-  return { react: 0, relax: false, campT: 0 };
+  let releasing = false;
+  return {
+    input(run) {
+      if (run.screen !== 'game') return {};
+      if (run.phase === 'idle') return { pressed: true, hold: true };
+      if (run.phase === 'charge') {
+        if (run.charge >= 0.72) return { released: true };
+        return { hold: true };
+      }
+      if (run.phase === 'wait') {
+        if (run.wait && run.wait.open) return { pressed: true };
+        return {};
+      }
+      if (run.phase === 'fight') {
+        const t = run.fight.tension;
+        if (t > 82) releasing = true;
+        if (t < 55) releasing = false;
+        return releasing ? {} : { hold: true };
+      }
+      return {};
+    },
+  };
 }
 
-function nextPurchase(run) {
-  for (const [kind, i] of BUY_ORDER) {
-    if (kind === 'rod' && !run.rodsOwned[i]) return { kind, i, cost: RODS[i].cost };
-    if (kind === 'bait' && !run.baitsOwned[i]) return { kind, i, cost: BAITS[i].cost };
-    if (kind === 'loc' && !run.locsOpen[i]) return { kind, i, cost: LOCATIONS[i].cost };
+// Between casts: spend coins in a fixed priority and sail to the deepest open
+// sea that still hides an uncaught monster. The Mother Kraken only answers
+// the Doom Bell, so the bell is bought and rung whenever the Maw is the hunt.
+export function botShop(run) {
+  const uncaughtAt = (sea) => poolFor(sea).some((i) => run.bestiary[i].count === 0);
+  // unlock seas first, then the winch, then the bell, then the rig
+  if (!run.seasOpen[1] && run.coins >= SEAS[1].unlock) buyEquip(run, 'sea', 1);
+  if (!run.ownedH[1] && run.coins >= 150) buyEquip(run, 'harpoon', 1);
+  if (!run.seasOpen[2] && run.coins >= SEAS[2].unlock) buyEquip(run, 'sea', 2);
+  if (!run.ownedL[3] && run.coins >= 100) buyEquip(run, 'lure', 3);
+  if (!run.ownedH[2] && run.coins >= 350) buyEquip(run, 'harpoon', 2);
+  if (!run.ownedL[2] && run.coins >= 80) buyEquip(run, 'lure', 2);
+  if (!run.ownedL[1] && run.coins >= 60) buyEquip(run, 'lure', 1);
+  // where to hunt
+  let target = 0;
+  for (let s = 2; s >= 0; s--) {
+    if (run.seasOpen[s] && uncaughtAt(s)) { target = s; break; }
   }
-  return null;
-}
-
-function bestTravel(run) {
-  // Hunt the unlocked sea with the most bestiary gaps; ties go to the
-  // deepest sea (best income while waiting out a shy rare), so one
-  // missing monster can never gate the whole season.
-  let best = run.location, most = -1;
-  for (let loc = 0; loc < 3; loc++) {
-    if (!run.locsOpen[loc]) continue;
-    const missing = poolMissing(run, loc).length;
-    if (missing >= most) { most = missing; best = loc; }
-  }
-  return best;
-}
-
-// One camp visit: buy the next affordable item, equip the best gear for the
-// water we are heading to, travel, leave. Returns true while still shopping.
-export function botCamp(run) {
-  const want = nextPurchase(run);
-  if (want && run.coins >= want.cost) {
-    if (want.kind === 'rod') buyRod(run, want.i);
-    else if (want.kind === 'bait') buyBait(run, want.i);
-    else travelTo(run, want.i);
-    return true;
-  }
-  const dest = bestTravel(run);
-  if (dest !== run.location) { travelTo(run, dest); return true; }
-  // Equip the strongest harpoon and the best lure we own for this sea.
-  for (let i = 2; i >= 0; i--) if (run.rodsOwned[i]) { run.rod = i; break; }
-  run.bait = run.baitsOwned[3] && run.location === 2 ? 3
-    : run.baitsOwned[2] ? 2 : run.baitsOwned[1] ? 1 : 0;
-  return false;
-}
-
-// Per-step play policy. mem is the bot's scratch memory from makeBot().
-export function botInput(run, mem) {
-  const input = { hold: false, tap: false };
-  if (run.screen === 'camp') return input;
-  if (run.screen !== 'play') return input;
-  switch (run.phase) {
-    case 'idle': {
-      const want = nextPurchase(run);
-      const shouldShop = (want && run.coins >= want.cost) || bestTravel(run) !== run.location;
-      if (shouldShop) { run.screen = 'camp'; break; }
-      input.tap = true; input.hold = true;
-      break;
-    }
-    case 'charge':
-      input.hold = run.charge < 0.72;
-      break;
-    case 'wait':
-      mem.react = 0;
-      break;
-    case 'bite':
-      mem.react += 1 / 30;
-      if (mem.react > 0.15) input.tap = true;
-      break;
-    case 'fight': {
-      const t = run.tension;
-      if (mem.relax && t < 58) mem.relax = false;
-      if (t > 86) mem.relax = true;
-      input.hold = !mem.relax && t < 78;
-      break;
-    }
-  }
-  return input;
+  if (run.sea !== target) buyEquip(run, 'sea', target);
+  // the right lure for the water: bell in the Maw, fastest elsewhere
+  const wantLure = target === 2 && run.ownedL[3] ? 3 : run.ownedL[2] ? 2 : run.ownedL[1] ? 1 : 0;
+  if (run.lure !== wantLure) buyEquip(run, 'lure', wantLure);
+  // best harpoon owned
+  const wantH = run.ownedH[2] ? 2 : run.ownedH[1] ? 1 : 0;
+  if (run.harpoon !== wantH) buyEquip(run, 'harpoon', wantH);
+  void MONSTERS;
 }

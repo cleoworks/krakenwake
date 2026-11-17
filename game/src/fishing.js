@@ -1,219 +1,224 @@
-// fishing.js — the whole game as pure logic: createRun(seed) + step(run, input, dt).
-// No DOM, no canvas: Node imports this for the seeded bot proof, the browser
-// imports it for play. Input is { hold, tap }; step returns event strings
-// ('cast', 'bite', 'catch', ...) so the shell can play sounds and particles.
-import { makeRng } from './rng.js';
-import {
-  SPECIES, RODS, BAITS, LOCATIONS, DAY_LEN, SEASON_DAYS,
-  STRIKE_WINDOW, poolFor, weatherForDay,
-} from './data.js';
-import { newStats, recordBest } from './state.js';
+// fishing.js — one job: the rules of the hunt, as pure logic. createRun lives
+// in state.js; step() advances a run by dt given {hold, pressed, released}.
+// No DOM, no canvas, no audio: Node imports this file for the seeded proof.
+import { MONSTERS, SEAS, HARPOONS, LURES, WEATHERS, NIGHT_SECONDS, SEASON_NIGHTS, poolFor } from './data.js';
+import { journalCount } from './state.js';
 
-export function createRun(seed) {
-  const rng = makeRng(seed);
-  const run = {
-    seed, rng, t: 0, screen: 'play', phase: 'idle',
-    day: 1, dayT: DAY_LEN, weather: weatherForDay(rng),
-    coins: 0, combo: 0, location: 0, rod: 0, bait: 0,
-    rodsOwned: [true, false, false], baitsOwned: [true, false, false, false],
-    locsOpen: [true, false, false],
-    charge: 0, chargeDir: 1, castPower: 0, tension: 0,
-    cur: null, journal: {}, journalCount: 0, stats: newStats(),
-    best: null, banner: '',
-  };
-  return run;
+const ev = (run, type, data = {}) => run.events.push({ type, ...data });
+
+function finish(run, result) {
+  run.result = result;
+  run.screen = 'end';
+  run.phase = 'idle';
+  run.wait = null;
+  run.fight = null;
+  ev(run, 'end', { result });
 }
 
-function pickFish(run) {
-  const bait = BAITS[run.bait];
-  const pool = poolFor(run.location);
+function endNight(run) {
+  if (run.night >= SEASON_NIGHTS) return finish(run, 'over');
+  run.night += 1;
+  run.nightT = 0;
+  run.weatherIdx = run.rng.int(0, WEATHERS.length - 1);
+  run.phase = 'idle';
+  run.wait = null;
+  run.fight = null;
+  ev(run, 'night', { night: run.night });
+}
+
+// Which monster answers the lure: this sea's pool, the Kraken only when the
+// Doom Bell rings, uncaught monsters far more likely, rares boosted by weather.
+function pickMonster(run) {
+  const lure = LURES[run.lure];
+  const odds = WEATHERS[run.weatherIdx].odds;
+  const pool = poolFor(run.sea).filter((i) => !MONSTERS[i].doom || lure.doom);
   let total = 0;
-  const weights = pool.map((sp) => {
-    let w = sp.w * bait.tierMul[sp.tier];
-    if (sp.tier >= 2) w *= run.weather.rare;
+  const weights = pool.map((i) => {
+    let w = MONSTERS[i].weight;
+    if (run.bestiary[i].count === 0) w *= 2.0;
+    if (MONSTERS[i].weight <= 13) w *= odds;
     total += w;
     return w;
   });
   let roll = run.rng.next() * total;
-  for (let i = 0; i < pool.length; i++) {
-    roll -= weights[i];
-    if (roll <= 0) return pool[i];
+  for (let k = 0; k < pool.length; k++) {
+    roll -= weights[k];
+    if (roll <= 0) return pool[k];
   }
   return pool[pool.length - 1];
 }
 
-function rollWeight(run, sp) {
-  const [lo, hi] = sp.wt;
-  return lo + (hi - lo) * Math.pow(run.rng.next(), 1.6);
+function startWait(run) {
+  const lure = LURES[run.lure];
+  const weather = WEATHERS[run.weatherIdx];
+  const biteIn = run.rng.range(1.6, 4.2) * lure.bite * weather.bite;
+  const fakes = [];
+  if (run.rng.chance(0.35) && biteIn > 1.4) fakes.push(run.rng.range(0.5, biteIn - 0.8));
+  if (run.rng.chance(0.15) && biteIn > 2.2) fakes.push(run.rng.range(0.4, biteIn - 1.0));
+  run.wait = { t: 0, biteIn, open: false, window: 0, telegraph: false, fakes, dip: 0 };
+  run.phase = 'wait';
 }
 
-function startFight(run, sp, kg) {
-  run.cur = {
-    sp, kg, dist: 22 + run.castPower * 24, stamina: sp.stam, maxStam: sp.stam,
-    behavior: 'calm', bT: 1, redT: 0,
-  };
-  run.tension = 12;
+function startFight(run) {
+  const mi = pickMonster(run);
+  const m = MONSTERS[mi];
+  const kg = m.kgMin + Math.pow(run.rng.next(), 1.25) * (m.kgMax - m.kgMin);
+  run.fight = { mi, kg, dist: run.castDist, tension: 12, t: 0, snapT: 0, surgePhase: run.rng.range(0, 6.28) };
+  run.wait = null;
   run.phase = 'fight';
+  ev(run, 'strike', { mi });
+  ev(run, 'splash', { mi });
 }
 
-function endSeason(run, events) {
-  run.screen = run.journalCount >= SPECIES.length ? 'victory' : 'gameover';
-  run.best = recordBest(run);
-  events.push(run.screen);
-}
-
-function rollDay(run, events) {
-  run.day += 1;
-  if (run.day > SEASON_DAYS) { endSeason(run, events); return; }
-  run.dayT = DAY_LEN;
-  run.weather = weatherForDay(run.rng);
-  run.cur = null; run.phase = 'idle'; run.tension = 0;
-  run.banner = `Night ${run.day} — ${run.weather.name}`;
-  events.push('day');
-}
-
-function catchFish(run, events) {
-  const { sp, kg } = run.cur;
-  const comboMul = 1 + 0.12 * Math.min(run.combo, 10); // combo pays, capped at x2.2
-  const coins = Math.round(sp.base * (0.8 + (kg / sp.wt[1]) * 0.7) * comboMul);
-  run.coins += coins;
+function haul(run) {
+  const f = run.fight;
+  const m = MONSTERS[f.mi];
+  const gained = Math.round((6 + f.kg * m.vpk) * (1 + 0.1 * run.combo));
+  run.coins += gained;
+  run.coinsEarned += gained;
   run.combo += 1;
-  const st = run.stats;
-  st.catches += 1; st.coinsEarned += coins;
-  st.longestCombo = Math.max(st.longestCombo, run.combo);
-  const rec = st.perSpecies[sp.id] ?? (st.perSpecies[sp.id] = { count: 0, best: 0 });
-  rec.count += 1; rec.best = Math.max(rec.best, kg);
-  if (!st.biggest || kg > st.biggest.kg) st.biggest = { id: sp.id, name: sp.name, kg };
-  const isNew = !run.journal[sp.id];
-  run.journal[sp.id] = rec;
-  run.journalCount = Object.keys(run.journal).length;
-  run.lastCatch = { sp, kg, coins, isNew };
-  run.cur = null; run.tension = 0; run.phase = 'idle';
-  events.push('catch');
-  if (run.journalCount >= SPECIES.length) endSeason(run, events);
-}
-
-function loseFish(run, events, why) {
-  run.cur = null; run.tension = 0; run.phase = 'idle'; run.combo = 0;
-  events.push(why);
-}
-
-function stepFight(run, input, dt, events) {
-  const cur = run.cur, sp = cur.sp, rod = RODS[run.rod];
-  cur.bT -= dt;
-  if (cur.bT <= 0) {
-    const r = run.rng.next();
-    if (r < 0.34) { cur.behavior = 'calm'; cur.bT = run.rng.range(1.0, 2.0); }
-    else if (r < 0.64) { cur.behavior = 'run'; cur.bT = run.rng.range(0.6, 1.2); }
-    else if (r < 0.86) { cur.behavior = 'dive'; cur.bT = run.rng.range(0.8, 1.4); }
-    else { cur.behavior = cur.dist > 10 ? 'jump' : 'run'; cur.bT = 0.45; }
-    if (cur.behavior !== 'calm') events.push('splash');
+  run.bestCombo = Math.max(run.bestCombo, run.combo);
+  run.hauled += 1;
+  const b = run.bestiary[f.mi];
+  b.count += 1;
+  b.bestKg = Math.max(b.bestKg, f.kg);
+  if (f.kg > run.biggestKg) {
+    run.biggestKg = f.kg;
+    run.biggestName = m.name;
   }
-  const tired = cur.stamina <= 0;
-  const pull = tired ? 0.4
-    : cur.behavior === 'run' ? sp.pull
-    : cur.behavior === 'dive' ? sp.pull * 0.75
-    : cur.behavior === 'jump' ? sp.pull * 0.4 : sp.pull * 0.25;
+  ev(run, 'haul', { mi: f.mi, kg: f.kg, coins: gained });
+  run.fight = null;
+  run.phase = 'idle';
+  if (journalCount(run) >= 13) finish(run, 'victory');
+}
+
+function stepWait(run, dt, input) {
+  const w = run.wait;
+  w.t += dt;
+  w.dip = Math.max(0, w.dip - dt);
+  for (const ft of w.fakes) {
+    if (w.t - dt < ft && w.t >= ft) {
+      w.dip = 0.35;
+      ev(run, 'fake');
+    }
+  }
+  if (!w.telegraph && w.t >= w.biteIn - 0.55) {
+    w.telegraph = true;
+    ev(run, 'telegraph');
+  }
+  if (!w.open && w.t >= w.biteIn) {
+    w.open = true;
+    w.window = 0.5;
+    ev(run, 'bite');
+  }
+  if (w.open) {
+    if (input.pressed) return startFight(run);
+    w.window -= dt;
+    if (w.window <= 0) {
+      run.wait = null;
+      run.phase = 'idle';
+      ev(run, 'escape');
+    }
+  }
+}
+
+function stepFight(run, dt, input) {
+  const f = run.fight;
+  const m = MONSTERS[f.mi];
+  const gear = HARPOONS[run.harpoon];
+  f.t += dt;
+  const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
+  const load = m.power * (0.35 + 0.65 * Math.max(0, surge01));
   if (input.hold) {
-    cur.dist -= rod.reel * 6.2 * (tired ? 1.7 : 1) * dt;
-    cur.dist += pull * 0.55 * dt;
-    run.tension += (dt * (9 + pull * 3.4 + (cur.behavior === 'jump' ? 16 : 0))) / rod.control;
+    f.tension += (load * 2.05 - gear.control * 1.55) * dt;
+    f.dist -= gear.reel * Math.max(0.35, 1.12 - f.tension / 160) * dt;
   } else {
-    cur.dist += (pull * 0.6 + 1.0) * dt;
-    run.tension -= dt * 40;
+    f.tension -= 46 * dt;
+    f.dist += (2 + m.power * 0.05) * dt;
   }
-  if (run.weather.gust) run.tension += Math.sin(run.t * 9.1) * run.weather.gust * 5 * dt;
-  run.tension = Math.max(0, Math.min(105, run.tension));
-  run.stats.peakTension = Math.max(run.stats.peakTension, Math.round(run.tension));
-  if (run.tension > 30) {
-    const drain = (dt * (run.tension / 100) * sp.stam) / 5;
-    cur.stamina -= cur.behavior === 'jump' ? drain * 1.5 : drain;
-  } else if (!input.hold) {
-    cur.stamina = Math.min(cur.maxStam, cur.stamina + dt * 1.2);
+  f.tension = Math.min(105, Math.max(0, f.tension));
+  run.peakTension = Math.max(run.peakTension, Math.min(100, f.tension));
+  if (f.tension >= 100) {
+    f.snapT += dt;
+    if (f.snapT > 0.7) {
+      run.combo = 0;
+      run.fight = null;
+      run.phase = 'idle';
+      ev(run, 'snap', { mi: f.mi });
+      return;
+    }
+  } else {
+    f.snapT = Math.max(0, f.snapT - dt * 2);
   }
-  if (run.tension >= 97) { cur.redT += dt; if (cur.redT > 1.2) { loseFish(run, events, 'snap'); return; } }
-  else cur.redT = Math.max(0, cur.redT - dt * 2);
-  if (cur.dist <= 2.5) { catchFish(run, events); return; }
-  if (cur.dist >= 78) loseFish(run, events, 'escape');
+  if (f.dist <= 0) return haul(run);
+  if (f.t > 30) {
+    run.fight = null;
+    run.phase = 'idle';
+    ev(run, 'escape');
+  }
 }
 
-export function step(run, input, dt) {
-  const events = [];
-  if (run.screen !== 'play') return events;
-  run.t += dt;
-  run.dayT -= dt;
-  if (run.dayT <= 0) { rollDay(run, events); return events; }
-  switch (run.phase) {
-    case 'idle':
-      if (input.tap) { run.phase = 'charge'; run.charge = 0; run.chargeDir = 1; }
-      break;
-    case 'charge':
-      if (input.hold) {
-        run.charge += run.chargeDir * dt * 1.5;
-        if (run.charge >= 1) { run.charge = 1; run.chargeDir = -1; }
-        if (run.charge <= 0) { run.charge = 0; run.chargeDir = 1; }
-      } else {
-        run.castPower = run.charge;
-        run.stats.casts += 1;
-        const wait = run.rng.range(1.8, 4.6) * BAITS[run.bait].wait * run.weather.bite;
-        // a fake bite may tease the lure first; the real bite always
-        // telegraphs a beat ahead, so the strike window feels fair
-        const fakeAt = run.rng.chance(0.35) ? wait * run.rng.range(0.3, 0.55) : -1;
-        run.cur = { waitT: wait, biteT: 0, fakeAt, faked: false, telegraphed: false };
-        run.phase = 'wait';
-        events.push('cast');
-      }
-      break;
-    case 'wait':
-      run.cur.waitT -= dt;
-      if (!run.cur.faked && run.cur.fakeAt > 0 && run.cur.waitT <= run.cur.fakeAt) {
-        run.cur.faked = true;
-        events.push('fakebite');
-      }
-      if (!run.cur.telegraphed && run.cur.waitT <= 0.55) {
-        run.cur.telegraphed = true;
-        events.push('telegraph');
-      }
-      if (run.cur.waitT <= 0) {
-        const sp = pickFish(run);
-        run.cur = { sp, kg: rollWeight(run, sp), biteT: STRIKE_WINDOW * sp.win };
-        run.phase = 'bite';
-        events.push('bite');
-      }
-      break;
-    case 'bite':
-      if (input.tap) { startFight(run, run.cur.sp, run.cur.kg); events.push('strike'); }
-      else {
-        run.cur.biteT -= dt;
-        if (run.cur.biteT <= 0) { run.cur = null; run.phase = 'idle'; events.push('spook'); }
-      }
-      break;
-    case 'fight':
-      stepFight(run, input, dt, events);
-      break;
+export function step(run, dt, input = {}) {
+  if (run.screen !== 'game') return;
+  run.nightT += dt;
+  if (run.nightT >= NIGHT_SECONDS) {
+    endNight(run);
+    return;
   }
-  return events;
+  if (run.phase === 'idle') {
+    if (input.pressed) {
+      run.phase = 'charge';
+      run.charge = 0;
+      run.chargeDir = 1;
+    }
+  } else if (run.phase === 'charge') {
+    if (input.hold) {
+      run.charge += run.chargeDir * dt * 1.35;
+      if (run.charge >= 1) { run.charge = 1; run.chargeDir = -1; }
+      if (run.charge <= 0) { run.charge = 0; run.chargeDir = 1; }
+    }
+    if (input.released) {
+      run.throws += 1;
+      run.castDist = 34 + run.charge * 56;
+      ev(run, 'throw', { dist: run.castDist });
+      startWait(run);
+    }
+  } else if (run.phase === 'wait') {
+    stepWait(run, dt, input);
+  } else if (run.phase === 'fight') {
+    stepFight(run, dt, input);
+  }
 }
 
-// --- Camp (shop + travel): every purchase is a hunting upgrade. ---
-export function buyRod(run, i) {
-  if (run.rodsOwned[i] || run.coins < RODS[i].cost) return false;
-  run.coins -= RODS[i].cost; run.rodsOwned[i] = true; run.rod = i;
-  return true;
-}
-export function equipRod(run, i) { if (run.rodsOwned[i]) run.rod = i; }
-export function buyBait(run, i) {
-  if (run.baitsOwned[i]) { run.bait = i; return true; }
-  if (run.coins < BAITS[i].cost) return false;
-  run.coins -= BAITS[i].cost; run.baitsOwned[i] = true; run.bait = i;
-  return true;
-}
-export function travelTo(run, i) {
-  if (run.locsOpen[i]) { run.location = i; return true; }
-  if (run.coins < LOCATIONS[i].cost) return false;
-  run.coins -= LOCATIONS[i].cost; run.locsOpen[i] = true; run.location = i;
-  return true;
-}
-export function poolMissing(run, loc) {
-  return poolFor(loc).filter((sp) => !run.journal[sp.id]);
+// --- camp actions (used by the camp screen clicks and by the bot) ---
+
+export function buyEquip(run, kind, idx) {
+  if (kind === 'harpoon') {
+    if (!run.ownedH[idx]) {
+      if (run.coins < HARPOONS[idx].price) return false;
+      run.coins -= HARPOONS[idx].price;
+      run.ownedH[idx] = true;
+    }
+    run.harpoon = idx;
+    return true;
+  }
+  if (kind === 'lure') {
+    if (!run.ownedL[idx]) {
+      if (run.coins < LURES[idx].price) return false;
+      run.coins -= LURES[idx].price;
+      run.ownedL[idx] = true;
+    }
+    run.lure = idx;
+    return true;
+  }
+  if (kind === 'sea') {
+    if (!run.seasOpen[idx]) {
+      if (run.coins < SEAS[idx].unlock) return false;
+      run.coins -= SEAS[idx].unlock;
+      run.seasOpen[idx] = true;
+    }
+    run.sea = idx;
+    return true;
+  }
+  return false;
 }

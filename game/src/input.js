@@ -1,29 +1,66 @@
-// input.js — keyboard + mouse as one held/tapped stream, plus discrete key
-// and click events for menus. `tap` is an edge: true only on the frame the
-// press begins, which is what the strike window listens to.
+// input.js — one job: turn keyboard and pointer into a per-frame input
+// snapshot {hold, pressed, released, pressedKeys} plus a queue of canvas
+// clicks in game coordinates. Space (or holding the pointer) is the one
+// button the whole game is played with.
 export function makeInput(canvas) {
-  const input = {
-    hold: false, tap: false, keys: [], clicks: [],
-    _down: false,
+  const held = new Set();
+  let pressedKeys = new Set();
+  let spaceDown = false;
+  let pressed = false;
+  let released = false;
+  const clicks = [];
+
+  const pressSpace = () => {
+    if (spaceDown) return;
+    spaceDown = true;
+    pressed = true;
   };
-  const press = () => { if (!input._down) { input._down = true; input.tap = true; } input.hold = true; };
-  const release = () => { input._down = false; input.hold = false; };
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { press(); e.preventDefault(); }
-    if (!e.repeat) input.keys.push(e.code);
-  });
-  window.addEventListener('keyup', (e) => { if (e.code === 'Space') release(); });
-  canvas.addEventListener('pointerdown', (e) => {
+  const releaseSpace = () => {
+    if (!spaceDown) return;
+    spaceDown = false;
+    released = true;
+  };
+  const toGame = (e) => {
     const r = canvas.getBoundingClientRect();
-    input.clicks.push({
-      x: ((e.clientX - r.left) / r.width) * canvas.width,
-      y: ((e.clientY - r.top) / r.height) * canvas.height,
-    });
-    press();
+    return {
+      x: ((e.clientX - r.left) / r.width) * 1280,
+      y: ((e.clientY - r.top) / r.height) * 720,
+    };
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!e.repeat) pressSpace();
+    }
+    if (!e.repeat) pressedKeys.add(e.code);
+    held.add(e.code);
   });
-  window.addEventListener('pointerup', release);
-  canvas.addEventListener('pointerleave', () => { if (input._down) release(); });
-  // Called once per frame after the step: clear edges and one-shot events.
-  input.consume = () => { input.tap = false; input.keys.length = 0; input.clicks.length = 0; };
-  return input;
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') releaseSpace();
+    held.delete(e.code);
+  });
+  canvas.addEventListener('pointerdown', (e) => {
+    clicks.push(toGame(e));
+    pressSpace();
+  });
+  window.addEventListener('pointerup', () => releaseSpace());
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  return {
+    // call once per frame: edges are reported for exactly one frame
+    frame() {
+      const snap = { hold: spaceDown, pressed, released, pressedKeys };
+      pressed = false;
+      released = false;
+      pressedKeys = new Set();
+      return snap;
+    },
+    takeClicks() {
+      const out = clicks.slice();
+      clicks.length = 0;
+      return out;
+    },
+    held,
+  };
 }

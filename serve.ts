@@ -1,34 +1,28 @@
-// serve.ts — a tiny static file server for local play-testing.
-//   node serve.ts [--port 8080]
-// Serves this directory; / opens the game. No dependencies.
+// serve.ts — a tiny static server for playing the game locally:
+//   node serve.ts   →   http://127.0.0.1:8377
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const root = fileURLToPath(new URL('.', import.meta.url));
-const portArg = process.argv.indexOf('--port');
-const port = portArg >= 0 ? Number(process.argv[portArg + 1]) : 8080;
 const TYPES = {
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8',
-  '.mjs': 'text/javascript; charset=utf-8',
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.css': 'text/css',
   '.json': 'application/json',
   '.png': 'image/png',
-  '.css': 'text/css',
 };
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
   try {
-    let path = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-    if (path === '/') path = '/game/';
-    if (path.endsWith('/')) path += 'index.html';
-    const file = join(root, normalize(path).replace(/^(\\.\\.[/\\\\])+/, ''));
-    const body = await readFile(file);
-    res.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' });
+    const url = new URL(req.url, 'http://127.0.0.1');
+    const path = normalize(join('game', url.pathname === '/' ? 'index.html' : url.pathname));
+    if (path.startsWith('..')) throw new Error('no');
+    const body = await readFile(path);
+    res.writeHead(200, { 'content-type': TYPES[extname(path)] ?? 'application/octet-stream' });
     res.end(body);
   } catch {
-    res.writeHead(404, { 'content-type': 'text/plain' });
+    res.writeHead(404);
     res.end('not found');
   }
-}).listen(port, () => console.log(`KRAKENWAKE at http://localhost:${port}/game/`));
+});
+server.listen(8377, () => console.log('KRAKENWAKE at http://127.0.0.1:8377'));
