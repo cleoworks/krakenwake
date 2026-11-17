@@ -2,19 +2,24 @@
 // amber in shadow, pale-gold light on the crest, bronze horns and a
 // bronze mane of dorsal spines, cream belly plates, one red eye. The
 // body follows ONE smooth curve (Catmull-Rom through the spine points):
-// wide low coils like a base, a swan-arc neck tapering to a long-snouted
-// head held high. Canvas vector, poster style. See shapes.js.
+// ONE TALL LOOP rearing out of the water — steep flanks, so every
+// surface crossing is a near-vertical dive hidden by its splash crown,
+// never a shallow dome squatting on the surface — then a submerged
+// valley, and the swan-arc neck bursting out to a long-snouted head
+// held high. Canvas vector, poster style. See shapes.js.
 import { shade, makeKit } from '../geom.js';
 
 // Spine control points in s units (x right, y down, waterline y=0):
-// tail, rear coil, a dip, mid coil, then the neck's S-arc to the head.
-// Third value: half thickness — thick where the body leaves the water,
-// finer toward the head. Index NECK is where the rising neck begins.
+// tail tip, the tall loop (steep rise, high crown, steep dive), a
+// submerged valley (clipped away by the dive rule), then the neck's
+// S-arc to the head. Third value: half thickness — thick where the
+// body leaves the water, finer toward the head. Index NECK is where
+// the rising neck begins.
 const SPINE = [
-  [1.62, 0.02, 0.10], [1.52, -0.18, 0.15], [1.22, -0.30, 0.19], [0.92, -0.34, 0.20],
-  [0.70, -0.22, 0.195], [0.62, -0.16, 0.185], [0.44, -0.22, 0.19], [0.25, -0.31, 0.185],
-  [0.12, -0.30, 0.17], [0.13, -0.58, 0.155], [0.07, -0.85, 0.145], [-0.05, -1.08, 0.135],
-  [-0.21, -1.27, 0.125], [-0.38, -1.40, 0.117], [-0.52, -1.48, 0.11],
+  [1.64, 0.08, 0.055], [1.58, -0.14, 0.12], [1.48, -0.52, 0.165], [1.30, -0.84, 0.185],
+  [1.04, -0.95, 0.19], [0.80, -0.78, 0.185], [0.64, -0.40, 0.18], [0.54, -0.02, 0.17],
+  [0.42, 0.16, 0.16], [0.24, -0.30, 0.155], [0.14, -0.60, 0.145], [0.05, -0.85, 0.138],
+  [-0.06, -1.07, 0.13], [-0.21, -1.26, 0.122], [-0.38, -1.40, 0.115], [-0.52, -1.48, 0.11],
 ];
 const NECK = 9;
 const BASE = '#c08a34', AMBER = '#8a5a1e', CREAM = '#f3e2b3', BRONZE = '#7d5220';
@@ -86,9 +91,9 @@ function ribbon(ctx, s, rear) {
   ctx.beginPath(); ctx.rect(-s * 1.2, -s * 2.6, s * 3.8, s * 2.6 + s * 0.035); ctx.clip();
   poly(ctx, [...L, ...R.reverse()], BASE);
   // pale-gold light along the top edge, amber shade along the belly edge
-  ctx.strokeStyle = 'rgba(255,226,150,0.9)'; ctx.lineWidth = Math.max(2, s * 0.024);
+  ctx.strokeStyle = 'rgba(255,226,150,0.9)'; ctx.lineWidth = Math.max(1.6, s * 0.017);
   ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
-  ctx.strokeStyle = 'rgba(110,70,18,0.65)'; ctx.lineWidth = Math.max(1.6, s * 0.02);
+  ctx.strokeStyle = 'rgba(110,70,18,0.65)'; ctx.lineWidth = Math.max(1.3, s * 0.014);
   ctx.beginPath(); L.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
   // scale bands across the COILS: seams bowed along the curve, spaced
   // by arc length — the segmentation that stops a dome reading as a
@@ -101,16 +106,11 @@ function ribbon(ctx, s, rear) {
     ctx.beginPath(); ctx.moveTo(L[si][0], L[si][1]);
     ctx.quadraticCurveTo((L[si][0] + R[si][0]) / 2 + f.dx * bow, (L[si][1] + R[si][1]) / 2 + f.dy * bow, R[si][0], R[si][1]);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,226,150,0.35)'; ctx.lineWidth = Math.max(1, s * 0.008);
-    ctx.beginPath(); ctx.moveTo(L[si][0] - f.dx * s * 0.035, L[si][1] - f.dy * s * 0.035);
-    ctx.quadraticCurveTo((L[si][0] + R[si][0]) / 2 + f.dx * (bow - s * 0.035), (L[si][1] + R[si][1]) / 2 + f.dy * (bow - s * 0.035),
-      R[si][0] - f.dx * s * 0.035, R[si][1] - f.dy * s * 0.035);
-    ctx.stroke();
   };
   let acc = 0;
   for (let si = 6; si < NECK * SUB - 2; si++) {
     acc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
-    if (acc >= s * 0.60) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
+    if (acc >= s * 1.15) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
   }
   // features ride the CONTROL points but take position and direction
   // from the smoothed curve (sample 8 per segment)
@@ -151,12 +151,16 @@ function ribbon(ctx, s, rear) {
   return ctrl;
 }
 
+// a splash CROWN where the body breaks the surface: a foam ring with
+// spikes thrown up around the crossing — the crown is what hides the
+// exact point where body meets water, so a steep dive never shows a cut
 function splash(ctx, x, y, r) {
-  ctx.strokeStyle = CREAM; ctx.globalAlpha = 0.8; ctx.lineWidth = Math.max(1.4, r * 0.08);
+  ctx.strokeStyle = CREAM; ctx.globalAlpha = 0.85; ctx.lineWidth = Math.max(1.4, r * 0.08);
   ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.3, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
   for (let i = -1; i <= 1; i++) {
-    ctx.beginPath(); ctx.moveTo(x + i * r * 0.5, y - r * 0.1);
-    ctx.lineTo(x + i * r * 0.72, y - r * (0.5 + 0.14 * (1 - Math.abs(i)))); ctx.stroke();
+    const h = 0.62 - 0.13 * Math.abs(i); // the middle spike flies highest
+    ctx.beginPath(); ctx.moveTo(x + i * r * 0.34, y - r * 0.08);
+    ctx.lineTo(x + i * r * 0.46, y - r * h); ctx.stroke();
   }
   ctx.globalAlpha = 1;
 }
@@ -187,7 +191,7 @@ function head(ctx, s, K, hx, hy, maw, rear) {
 }
 
 // drawWyrm(ctx, x, y, s, t, color, maw, rear): the full serpent at the
-// waterline point (x, y); broad low coils, a tapering S-neck, the head
+// waterline point (x, y); one tall loop, a tapering S-neck, the head
 // drawn a quarter larger again than the neck that carries it. color is
 // the eye colour (the roster red).
 export function drawWyrm(ctx, x, y, s, t, color = '#ff5a4e', maw = 0, rear = 0) {
@@ -209,10 +213,13 @@ export function drawWyrm(ctx, x, y, s, t, color = '#ff5a4e', maw = 0, rear = 0) 
   const hs = s * 1.25; // the head out-sizes the neck — the profile is the poster
   const KH = makeKit(ctx, hs, BASE, color);
   head(ctx, hs, KH, hp[0] - hs * 0.10, hp[1] - hs * 0.10, maw, rear);
-  splash(ctx, ctrl[5][0], 2, s * 0.20);
-  splash(ctx, ctrl[1][0], 2, s * 0.15); // a second collar where the tail-side dip kisses the surface
-  splash(ctx, ctrl[2][0], 2, s * 0.15); // and one on the rear coil's flank as it slides under
-  splash(ctx, ctrl[0][0], 2, s * 0.13); // the tail's own dive point gets its collar too
+  // a crown at EVERY surface crossing of the new pose: the tail's
+  // dive, the loop's steep rise, the loop's steep dive, and the neck
+  // bursting out of the submerged valley
+  splash(ctx, ctrl[0][0], 2, s * 0.15); // the tail's own dive point
+  splash(ctx, ctrl[1][0], 2, s * 0.20); // the loop rears out here
+  splash(ctx, ctrl[7][0], 2, s * 0.21); // the loop dives back here
+  splash(ctx, (ctrl[8][0] + ctrl[9][0]) / 2, 2, s * 0.19); // the neck breaks out
   ctx.restore();
 }
 

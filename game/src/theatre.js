@@ -124,7 +124,7 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1) {
   let acc = 0;
   for (let i = 2; i < S.length - 2; i++) {
     acc += Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1]);
-    if (acc < 48) continue;
+    if (acc < 120) continue;
     acc = 0;
     const a = S[i - 1], b = S[i + 1];
     let dx = b[0] - a[0], dy = b[1] - a[1];
@@ -133,20 +133,21 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1) {
     const mx = (L[i][0] + R[i][0]) / 2 + dx * w * 0.38, my = (L[i][1] + R[i][1]) / 2 + dy * w * 0.38;
     ctx.strokeStyle = 'rgba(46,26,4,0.55)'; ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(L[i][0], L[i][1]); ctx.quadraticCurveTo(mx, my, R[i][0], R[i][1]); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,226,150,0.30)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(L[i][0] - dx * 3, L[i][1] - dy * 3);
-    ctx.quadraticCurveTo(mx - dx * 3, my - dy * 3, R[i][0] - dx * 3, R[i][1] - dy * 3); ctx.stroke();
   }
   ctx.strokeStyle = 'rgba(255,226,150,0.7)'; ctx.lineWidth = 2;
   ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
 }
 
-// a foam collar where the body breaks the surface — the honest sign
-// that the stretch between the humps runs submerged
+// a foam CROWN where the body breaks the surface — foam ring plus
+// spikes thrown up around the crossing, hiding the exact point where
+// body meets water: the honest sign the next stretch runs submerged
 function foamCollar(ctx, x, y, r) {
   ctx.strokeStyle = 'rgba(240,248,255,0.85)'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
   ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.32, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
-  ctx.beginPath(); ctx.ellipse(x, y, r * 0.6, r * 0.2, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath(); ctx.moveTo(x + i * r * 0.3, y - r * 0.06);
+    ctx.lineTo(x + i * r * 0.42, y - r * (0.52 - 0.1 * Math.abs(i))); ctx.stroke();
+  }
 }
 
 // --- the wyrm, close: his body swims to the dock and coils its post ---
@@ -154,20 +155,23 @@ function drawWyrmTheatre(ctx, run, t) {
   const f = run.fight;
   if (MONSTERS[f.mi].shape !== 'wyrm') return;
   const g = monsterGeom(run);
-  // the body crosses in two humps — thick at his flank, finer toward
-  // the post — with a submerged stretch between: foam collars mark
-  // where it dives and where it rises again
+  // the body crosses in ONE TALL ARC — steep flanks, a high crown —
+  // then a submerged stretch, then a steep rise into the long run to
+  // the post: foam crowns mark every dive and rise, and no shallow
+  // dome ever squats on the surface (the blunt look, banned for good)
   const bob = Math.sin(t * 1.1) * 3, W = WATER_Y;
   loopRibbon(ctx, [
-    [g.x - g.s * 0.70, W + 6], [g.x - g.s * 1.12, W - g.s * 0.13 + bob], [g.x - g.s * 1.52, W + 4],
-  ], g.s * 0.17, g.s * 0.10, 0.4, 0.05); // narrows into his flank; dives to a point at the collar
+    [g.x - g.s * 0.52, W + 6], [g.x - g.s * 0.74, W - g.s * 0.30 + bob], [g.x - g.s * 1.02, W - g.s * 0.42 + bob],
+    [g.x - g.s * 1.30, W - g.s * 0.28 + bob], [g.x - g.s * 1.50, W + 4],
+  ], g.s * 0.16, g.s * 0.11, 0.08, 0.05); // out of his flank to a point, a tall arc, a steep dive to a point
   loopRibbon(ctx, [
-    [g.x - g.s * 1.94, W + 4], [g.x - g.s * 2.42, W - g.s * 0.07 + bob],
-    [(g.x - g.s * 2.42 + 336) / 2, W - 6 + bob], // a shallow sag in the long
+    [g.x - g.s * 1.88, W + 4], [g.x - g.s * 2.04, W - g.s * 0.20 + bob], [g.x - g.s * 2.40, W - g.s * 0.15 + bob],
+    [(g.x - g.s * 2.40 + 336) / 2, W - 6 + bob], // a shallow sag in the long
     [336, 398], [272, 394], // run to the post — a swimming back, not a slide
-  ], g.s * 0.09, g.s * 0.06, 0.05, 1); // rises from a point; the post
-  foamCollar(ctx, g.x - g.s * 1.52, W + 3, g.s * 0.16);
-  foamCollar(ctx, g.x - g.s * 1.94, W + 3, g.s * 0.14);
+  ], g.s * 0.09, g.s * 0.06, 0.05, 1); // rises steep from a point; the post
+  foamCollar(ctx, g.x - g.s * 0.52, W + 3, g.s * 0.15);
+  foamCollar(ctx, g.x - g.s * 1.50, W + 3, g.s * 0.16);
+  foamCollar(ctx, g.x - g.s * 1.88, W + 3, g.s * 0.14);
   ctx.lineCap = 'round';
   for (let i = 0; i < 3; i++) { // the coil: three wraps stepping down the
     const cy = 397 + i * 13, rx = 14 - i, ry = 5.5 + i * 0.5; // post — each
