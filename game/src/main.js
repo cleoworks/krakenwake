@@ -1,8 +1,6 @@
 // main.js — one job: conduct. Owns the canvas, the frame loop, the view
-// state (particles, shake, hit-stop, toast), the screens' flow (briefing,
-// game, camp, draft, end), sound triggers, the attract demo inside the
-// briefing, and the staged ?shot= states the screenshots are taken from.
-// Rules live in fishing.js; the meta layer in salvage.js.
+// state (particles, shake, hit-stop, toast), the screens' flow, sound
+// triggers, the attract demo, and the staged ?shot= states.
 import { MONSTERS, FEATS } from './data.js';
 import { createRun, journalCount, emptyBest, betterBest, gradeForScore } from './state.js';
 import { step } from './fishing.js';
@@ -95,8 +93,7 @@ function drainEvents(r) {
     else if (e.type === 'vital') sfx.vital();
     else if (e.type === 'escape') sfx.escape();
     else if (e.type === 'night') {
-      // the night that just ended becomes the draft's recap; the panels
-      // start a fresh tally, and the route remembers which sea it was
+      // the night that just ended becomes the draft's recap
       r.lastNightHauls = r.tonightHauls || [];
       r.tonightHauls = [];
       (r.nightSeas ??= []).push(r.sea);
@@ -187,8 +184,7 @@ function frame(ts) {
   if (view.shake < 0.05) view.shake = 0;
 
   if (run.screen === 'title') {
-    // the attract demo hunts on its own behind the briefing — and in its
-    // little window — drafting and shopping like a real hunter
+    // the attract demo hunts on its own behind the briefing
     if (demo.screen === 'end') demo = createRun(7);
     if (demo.screen === 'draft') botDraft(demo);
     if (demo.phase === 'idle') botShop(demo);

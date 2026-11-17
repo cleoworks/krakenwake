@@ -1,7 +1,5 @@
-// end.js — one job: the end screen, v2. The season's verdict with its
-// GRADE medal, the sea route it sailed, every stat, all thirteen counts,
-// and the FEATS — earned in gold, locked in grey — over the NEXT GOAL and
-// the persistent BEST.
+// end.js — one job: the end screen. The season's verdict with its GRADE
+// medal, the sea route, every stat, all thirteen counts, and the FEATS.
 import { MONSTERS, FEATS, DIFFICULTIES } from './data.js';
 import { journalCount, nextGoal, gradeForScore } from './state.js';
 import { text, panel, drawRouteStrip, GRADE_COLORS } from './ui.js';

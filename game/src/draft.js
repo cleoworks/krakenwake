@@ -1,8 +1,6 @@
 // draft.js — one job: the salvage draft screen. After each night (1-5) the
 // sea gives up three pieces of salvage and the hunter keeps one: a boon
-// that bends the rules for the rest of the season. The screen carries the
-// whole state of the run with it: the purse, the score, tonight's hauls,
-// and the sea route sailed so far — node by node, sea by sea.
+// that bends the rules for the rest of the season.
 import { boonById, SEAS, MONSTERS } from './data.js';
 import { journalCount } from './state.js';
 import { boonsLabel } from './salvage.js';
@@ -14,9 +12,8 @@ export function draftLayout() {
   return { cards };
 }
 
-// The route as a sailed path: a line through six night nodes, the grade
-// lettered into the nights already survived, the sea each night was
-// hunted in named underneath.
+// The route as a sailed path: a line through six night nodes, grades
+// lettered in, the sea each night was hunted in named underneath.
 function drawDraftRoute(ctx, run) {
   const y = 552;
   const x0 = 250;

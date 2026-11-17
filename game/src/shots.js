@@ -1,7 +1,5 @@
-// shots.js — one job: the staged ?shot=NAME states the four screenshots are
-// taken from. Each is a real run object, frozen mid-moment: the Kraken
-// fight for the cover, the briefing with a filled BEST, the salvage draft
-// after night 3, and the S-grade victory.
+// shots.js — one job: the staged ?shot=NAME states the four screenshots
+// are taken from. Each is a real run object, frozen mid-moment.
 import { createRun } from './state.js';
 
 function markCaught(r, list) {
@@ -18,6 +16,7 @@ export function stageShot(name, view, burst) {
   r.screen = 'game';
   view.t = 1.35;
   if (name === 'cover') {
+    view.pose = 'reel'; // frozen mid-haul: he works the cable as the slam rears
     r.night = 5; r.weatherIdx = 3; r.sea = 2; r.seasOpen = [true, true, true];
     r.coins = 1240; r.combo = 6; r.bestCombo = 6; r.throws = 34; r.hauled = 30;
     r.score = 5310; r.boons = ['cable', 'winch'];
@@ -32,7 +31,7 @@ export function stageShot(name, view, burst) {
     r.castDist = 62;
     r.surgeCharges = 1; r.surgeFill = 0.5;
     // frozen at the read: her slam is telegraphed and rearing, the gold
-    // weak point is open on her dome, and a VITAL tick has just landed
+    // weak point open on her dome, a VITAL tick just landed
     r.fight = {
       mi: 12, kg: 58, dist: 62, tension: 63, t: 6.4, snapT: 0, surgePhase: 0, stamina: 46,
       wpNext: 5, wpT: 0.9, wpFake: false, wpDx: 0.3, wpDy: -0.1,
@@ -47,8 +46,10 @@ export function stageShot(name, view, burst) {
     demoShot.sea = 1; demoShot.weatherIdx = 1; demoShot.castDist = 58;
     demoShot.phase = 'wait';
     demoShot.wait = { t: 2, biteIn: 3, open: false, window: 0, telegraph: true, fakes: [], dip: 0.2 };
-    const shotBest = { result: 'BESTIARY COMPLETE', species: 13, biggestKg: 52.4, biggestName: 'Mother Kraken', combo: 11, coins: 4210, score: 8120, grade: 'A' };
-    const shotLast = { result: 'BESTIARY COMPLETE', species: 13, score: 6980, grade: 'A' };
+    // the BEST on the briefing is the very season the victory screen
+    // shows — same score, grade, biggest haul, combo and coins
+    const shotBest = { result: 'BESTIARY COMPLETE', species: 13, biggestKg: 52.4, biggestName: 'Mother Kraken', combo: 11, coins: 4210, score: 9650, grade: 'S' };
+    const shotLast = { result: 'BESTIARY COMPLETE', species: 13, score: 9650, grade: 'S' };
     return { r, mode: 'briefing', difficulty: 1, bestOverride: shotBest, lastOverride: shotLast, demoShot };
   }
   if (name === 'draft') {

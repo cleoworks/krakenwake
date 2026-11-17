@@ -1,9 +1,7 @@
 // panels.js — one job: the two side panels that flank the hunt. Left,
 // STILL LURKING: what this sea still hides. Right, TONIGHT'S HAUL: what
-// the night has paid so far. ui.js calls them from the HUD, so they live
-// only on the hunt screen — camp, draft, briefing and the end screen have
-// their own layouts. Compact by design: the left panel must end above
-// the hunter's hat, the right one hangs under the location chip.
+// the night has paid so far. Compact by design: the left panel must end
+// above the hunter's head, the right one hangs under the location chip.
 import { MONSTERS, SEAS, poolFor } from './data.js';
 import { text, panel } from './ui.js';
 import { drawFishShape } from './shapes.js';

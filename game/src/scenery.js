@@ -1,18 +1,17 @@
 // scenery.js — one job: density. Everything render.js had no room for —
-// a busier sky, a third water texture, the life under the surface, the
-// clutter on it, a dressed dock, and the theatre around a fight. Like
-// dressing.js, everything is placed from fixed hashes plus the frame
-// clock, so every frame — and every screenshot — agrees.
+// a busier sky, a third water texture, life under and on the surface, a
+// dressed dock, and the theatre around a fight. All placed from fixed
+// hashes plus the frame clock, so every screenshot agrees.
 import { staminaWord } from './fishing.js';
 import { MONSTERS } from './data.js';
 import { WATER_Y, lurePos } from './render.js';
 
 const hash = (i, k) => ((i * 2654435761 + k * 40503) % 1000) / 1000;
 
-// --- the sky: a second, finer star field and two slow cloud bands --------
+// --- the sky: a finer star field and two slow cloud bands ---
 export function drawSkyExtras(ctx, run, t) {
   ctx.fillStyle = '#dfeaf6';
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 12; i++) {
     const x = hash(i, 11) * 1280;
     const y = 8 + hash(i, 12) * 330;
     if (Math.hypot(x - 1085, y - 92) < 78) continue;
@@ -20,26 +19,26 @@ export function drawSkyExtras(ctx, run, t) {
     ctx.fillRect(x, y, 1.6, 1.6);
   }
   ctx.globalAlpha = 1;
-  // cloud bands: long dark smudges sliding through the upper sky
-  ctx.fillStyle = 'rgba(10,18,32,0.5)';
+  // cloud bands: dark smudges sliding through the upper sky
+  ctx.fillStyle = 'rgba(10,18,32,0.44)';
   for (let band = 0; band < 2; band++) {
     const yBase = 58 + band * 92;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const x = ((hash(i + band * 7, 13) * 1500 + t * (5 + band * 3)) % 1560) - 140;
       const y = yBase + hash(i + band * 7, 14) * 26;
       ctx.beginPath();
-      ctx.ellipse(x, y, 120 + hash(i, 15) * 90, 11 + band * 4, 0, 0, 6.29); ctx.fill();
+      ctx.ellipse(x, y, 96 + hash(i, 15) * 72, 11 + band * 4, 0, 0, 6.29); ctx.fill();
     }
   }
 }
 
-// --- the water: foam, sparkle, and everything living in it ---------------
+// --- the water: foam, sparkle, and everything living in it ---
 function drawFoamAndSparkle(ctx, run, t) {
   // drifting foam flecks, short pale dashes riding the swell leftward
   ctx.strokeStyle = 'rgba(215,238,252,0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 6; i++) {
     const x = ((hash(i, 21) * 1340 - t * (9 + hash(i, 22) * 14)) % 1340 + 1340) % 1340 - 30;
     const y = WATER_Y + 18 + hash(i, 23) * 240;
     ctx.moveTo(x, y);
@@ -48,7 +47,7 @@ function drawFoamAndSparkle(ctx, run, t) {
   ctx.stroke();
   // the third texture layer: fine sparkle, denser and smaller than dressing's
   ctx.fillStyle = '#e8f4ff';
-  for (let i = 0; i < 36; i++) {
+  for (let i = 0; i < 3; i++) {
     const x = hash(i, 25) * 1280;
     const y = WATER_Y + 10 + hash(i, 26) * 268;
     ctx.globalAlpha = 0.03 + 0.1 * Math.abs(Math.sin(t * 1.7 + i * 2.9));
@@ -61,7 +60,7 @@ function drawFoamAndSparkle(ctx, run, t) {
     const p = lurePos(run);
     ctx.strokeStyle = 'rgba(235,248,255,0.5)';
     ctx.lineWidth = 2;
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 4; i++) {
       const fx = p.x - 90 + i * 34 + Math.sin(t * 1.8 + i * 2.2) * 5;
       const fy = WATER_Y + 8 + (i % 3) * 7 + Math.sin(t * 2.3 + i) * 1.6;
       ctx.beginPath();
@@ -72,7 +71,7 @@ function drawFoamAndSparkle(ctx, run, t) {
 }
 
 function drawSchool(ctx, t) {
-  // a fish school mid-depth, holding its slow patrol across the frame
+  // a fish school mid-depth, on its slow patrol
   const gx = 700 + Math.sin(t * 0.11) * 190;
   const gy = 545 + Math.sin(t * 0.4) * 10;
   ctx.fillStyle = 'rgba(6,14,24,0.75)';
@@ -91,7 +90,7 @@ function drawSchool(ctx, t) {
 }
 
 function drawJellies(ctx, t) {
-  // two jellyfish keeping station in the Maw, lit from inside
+  // two jellyfish keeping station in the Maw
   for (const [jx, jy, s, ph] of [[420, 585, 21, 0], [585, 628, 15, 2.2]]) {
     const bob = Math.sin(t * 0.8 + ph) * 6;
     const g = ctx.createRadialGradient(jx, jy + bob, 2, jx, jy + bob, s * 2.1);
@@ -117,7 +116,7 @@ function drawJellies(ctx, t) {
 function drawSeaweed(ctx, t) {
   ctx.strokeStyle = 'rgba(16,44,30,0.8)';
   ctx.lineCap = 'round';
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 6; i++) {
     const bx = 330 + i * 118 + hash(i, 41) * 40;
     const h = 44 + hash(i, 42) * 42;
     ctx.lineWidth = 5 - (i % 3);
@@ -135,9 +134,9 @@ export function drawWaterLife(ctx, run, t) {
   drawSeaweed(ctx, t);
 }
 
-// --- the surface: flotsam, a far ship, gulls ------------------------------
+// --- the surface: flotsam, a far ship, gulls ---
 export function drawSurfaceDressing(ctx, run, t) {
-  // a barrel and a crate riding the swell, somebody else's bad night
+  // a barrel and a crate riding the swell
   const bob = (ph) => Math.sin(t * 1.3 + ph) * 3;
   ctx.fillStyle = '#1c130c';
   ctx.fillRect(566, WATER_Y + 2 + bob(0), 30, 22);
@@ -149,7 +148,7 @@ export function drawSurfaceDressing(ctx, run, t) {
   ctx.lineWidth = 2;
   ctx.strokeRect(638, WATER_Y + 6 + bob(2.1), 22, 16);
   if (run.sea === 1) {
-    // a distant second ship on the horizon of the Deep, hunting the same water
+    // a distant second ship on the Deep's horizon, hunting the same water
     ctx.fillStyle = '#060c16';
     ctx.beginPath();
     ctx.moveTo(652, WATER_Y - 2);
@@ -178,7 +177,7 @@ export function drawSurfaceDressing(ctx, run, t) {
   }
 }
 
-// --- the dock, dressed: lantern, crates, rope, flag ----------------------
+// --- the dock, dressed: lantern, crates, rope, flag ---
 export function drawDockDetail(ctx, run, t) {
   // crates stacked at the dock's left end
   ctx.fillStyle = '#2a1e12';
@@ -198,10 +197,8 @@ export function drawDockDetail(ctx, run, t) {
     ctx.ellipse(232, 409, r + 3, r * 0.45, 0, 0, 6.29);
     ctx.stroke();
   }
-  // the dock lantern: a post, an arm, and a warm light that flickers. When
-  // the Mother Kraken is on the cable the whole dock strains and the
-  // lantern swings on its arm; its light pools on the water at the dock's
-  // foot — the warm second focal point of the fight scene.
+  // the dock lantern: post, arm, warm flickering light; it swings when
+  // the Mother Kraken strains the dock, pooling light at its foot.
   const swing = run.fight && MONSTERS[run.fight.mi].shape === 'kraken' ? Math.sin(t * 3.1) * 5 : 0;
   ctx.save();
   ctx.translate(128, WATER_Y + 14);
@@ -241,13 +238,12 @@ export function drawDockDetail(ctx, run, t) {
   ctx.fill();
 }
 
-// --- the fight, staged: ripples, splash crown, callouts -------------------
+// --- the fight, staged: ripples, splash crown, callouts ---
 export function drawFightFx(ctx, run, t) {
   if (run.phase !== 'fight' || !run.fight) return;
   const f = run.fight;
   const p = lurePos(run);
-  // reflection shimmer under a big monster: broken light on the water,
-  // wider and brighter the heavier she is
+  // reflection shimmer under a big monster, wider the heavier she is
   const rw = 40 + Math.min(90, f.kg * 1.6);
   ctx.fillStyle = 'rgba(200,228,250,0.20)';
   for (let i = 0; i < 7; i++) {
@@ -285,7 +281,7 @@ export function drawFightFx(ctx, run, t) {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = wc;
   ctx.fillText(word, p.x, WATER_Y - 64);
-  // the surge, named when it comes — the same surge the rules compute
+  // the surge, named when it comes
   const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
   if (surge01 > 0.78) {
     ctx.save();

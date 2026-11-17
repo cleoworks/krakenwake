@@ -1,8 +1,6 @@
 // dressing.js — one job: make the water feel inhabited. Per-sea set
-// dressing (broken masts and lantern buoys in the Shoal, a wreck and
-// glow-motes in the Deep, bone spires in the Maw) and the weather layer
-// (sparkle noise, drifting fog banks, rain). Everything is placed from
-// fixed hashes, so every frame — and every screenshot — agrees.
+// dressing and the weather layer, all placed from fixed hashes so every
+// frame — and every screenshot — agrees.
 import { WEATHERS } from './data.js';
 
 const WATER_Y = 430; // mirrors render.js
@@ -12,7 +10,7 @@ export function drawWeatherFx(ctx, run, t) {
   const wname = WEATHERS[run.weatherIdx].name;
   // deterministic sparkle noise on the water
   ctx.fillStyle = '#cfe8ff';
-  for (let i = 0; i < 28; i++) {
+  for (let i = 0; i < 6; i++) {
     const x = hash(i, 1) * 1280;
     const y = WATER_Y + 14 + hash(i, 2) * 250;
     ctx.globalAlpha = 0.04 + 0.13 * Math.abs(Math.sin(t * 1.3 + i * 1.7));
@@ -76,7 +74,7 @@ function buoy(ctx, x, t, ph) {
 
 export function drawDressing(ctx, run, t) {
   if (run.sea === 0) {
-    // Widow's Shoal: wrecks of smaller hunters, lantern buoys, a gull's rock
+    // Widow's Shoal: wrecks of smaller hunters, lantern buoys
     mast(ctx, 585, 118, -14);
     mast(ctx, 1180, 74, 10);
     buoy(ctx, 724, t, 0);

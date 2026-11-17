@@ -1,15 +1,13 @@
 // camp.js — one job: the camp screen. The bestiary grid and the outfitter
 // (harpoons, lures, seas), the SEA ROUTE strip, BOONS HELD as icon rows,
-// and a NEXT NIGHT panel forecasting the sea, the sky and what still
-// lurks. One layout object is shared by the drawing and the click
-// handler in main.js.
+// and a NEXT NIGHT panel forecasting the sea, the sky and what still lurks.
 import { MONSTERS, SEAS, HARPOONS, LURES, WEATHERS, poolFor, boonById } from './data.js';
 import { journalCount } from './state.js';
 import { text, panel, rr, drawRouteStrip } from './ui.js';
 import { drawFishShape } from './shapes.js';
 import { drawBoonGlyph } from './glyphs.js';
 
-// one-line effects for the boon rows — the full text lives on the draft cards
+// one-line effects for the boon rows — full text lives on the draft cards
 const SHORT_FX = {
   cable: 'wider safe band', winch: '+25% reel speed', chum: 'bites 20% faster',
   aperture: '+50% strike window', charm: 'a snap keeps the combo', grip: 'stamina regens at half',

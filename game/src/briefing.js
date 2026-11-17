@@ -1,8 +1,7 @@
 // briefing.js — one job: the briefing screen that replaces the plain title.
-// It sells the whole game before the first throw: the goal, the win and the
-// lose, how to hunt in three cards, every threat by name, the difficulty
-// select, the BEST panel — and a small live window where the autopilot
-// hunts on its own. main.js owns the clicks; the layout lives here.
+// It sells the whole game before the first throw: goal, win and lose, how
+// to hunt, every threat by name, difficulty, the BEST panel, and a small
+// live window where the autopilot hunts on its own.
 import { MONSTERS, SEAS, DIFFICULTIES } from './data.js';
 import { text, panel, rr } from './ui.js';
 import { drawWorld } from './render.js';

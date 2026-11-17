@@ -1,6 +1,5 @@
 // ui.js — one job: the shared drawing kit (type, panels), the HUD, the
-// toast, and the sea-route strip every meta screen reuses. The screens
-// themselves live in briefing.js, camp.js, draft.js and end.js. Type is big
+// toast, and the sea-route strip every meta screen reuses. Type is big
 // and bold on purpose: the judge reads these screens shrunk.
 import { MONSTERS, SEAS, WEATHERS, BOONS, SEASON_NIGHTS, NIGHT_SECONDS } from './data.js';
 import { journalCount } from './state.js';
@@ -36,8 +35,8 @@ export function panel(ctx, x, y, w, h, a = 0.82) {
 
 export const GRADE_COLORS = { S: '#ffd94d', A: '#39d353', B: '#7fb2e8', C: '#5f7d99' };
 
-// The sea route: six night nodes — graded letters for nights survived, the
-// current night ringed, the rest still dark water.
+// The sea route: six night nodes — graded letters for nights survived,
+// the current night ringed, the rest still dark water.
 export function drawRouteStrip(ctx, run, x, y, label = true) {
   if (label) text(ctx, 'SEA ROUTE', x, y + 6, 16, '#8fb8d4');
   const x0 = label ? x + 96 : x;
@@ -65,7 +64,7 @@ export function drawRouteStrip(ctx, run, x, y, label = true) {
   }
 }
 
-// Boon pips: one little brass square per boon held, with its two-letter code.
+// Boon pips: one brass square per boon held, with its two-letter code.
 export function drawBoonPips(ctx, run, x, y, withLabel = true) {
   if (!run.boons.length) return;
   if (withLabel) text(ctx, 'BOONS', x, y + 17, 13, '#8fb8d4');

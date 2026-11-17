@@ -1,7 +1,6 @@
 // glyphs.js — one job: the boon icons. Small canvas glyphs in the game's
 // brass-on-dark hand, one per salvage boon, drawn in a unit box around
-// (cx, cy) with half-size s. draft.js stamps them large on the draft
-// cards; camp.js stamps them small in the BOONS HELD rows. No monograms.
+// (cx, cy) with half-size s. No monograms.
 const INK = '#ffd94d';
 const DIM = 'rgba(255,217,77,0.55)';
 

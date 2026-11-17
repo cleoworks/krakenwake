@@ -1,17 +1,12 @@
 // abilities.js — one job: the second layer of the fight. Weak points that
 // reward a held cable, one telegraphed species event per family, and the
-// SURGE meter that hauls and vital ticks fill. Pure logic like fishing.js:
-// fishing.js calls stepFightEvents / stepWeakPoint once per fight tick and
-// reads back the modifiers; everything here is deterministic under the
-// run's seeded RNG. Render reads the same state (f.event, f.wpT, f.inkT)
-// to stage the banner, the glow and the ink.
+// SURGE meter. Pure logic: fishing.js calls stepFightEvents /
+// stepWeakPoint per tick and reads back the modifiers.
 import { DIFFICULTIES } from './data.js';
 
 // Which family event each species owns, by MONSTERS index. Sailfin Horror
-// (2) and Corpse Whale (3) have none — they are simply heavy. The Mother
-// Kraken (12) is 'slam', and stepFightEvents alternates her slam with a
-// plain lunge. Pale Monkfish (4) owns no timed event: her trick lives in
-// the weak points themselves.
+// (2) and Corpse Whale (3) have none; the Mother Kraken (12) is 'slam',
+// alternating with a plain lunge. Pale Monkfish (4): see the weak points.
 const ABILITY_BY_INDEX = {
   0: 'lunge', 1: 'armor', 4: 'falseglow', 5: 'ink', 6: 'lunge', 7: 'armor',
   8: 'phase', 9: 'phase', 10: 'armor', 11: 'ink', 12: 'slam',
@@ -46,8 +41,7 @@ export function initFightFx(run, f) {
   f.inkT = 0;
 }
 
-// Bank surge charge: hauls pay half a charge, vital ticks a quarter. Two
-// charges is the cap; a full meter throws away the overflow.
+// Bank surge charge: hauls pay half a charge, vital ticks a quarter.
 export function addSurge(run, amt) {
   if (run.surgeCharges >= 2) { run.surgeFill = 0; return; }
   run.surgeFill += amt;
@@ -58,10 +52,8 @@ export function addSurge(run, amt) {
   if (run.surgeCharges >= 2) run.surgeFill = 0;
 }
 
-// The weak point: exposed for 1.2 s every 4–7 s. Holding the cable through
-// a real one is where the VITAL ticks (score + surge) come from; the
-// stamina multiplier itself is applied in fishing.js. The Pale Monkfish
-// lies: nearly half her glows are pale fakes that pay nothing.
+// The weak point: exposed for 1.2 s every 4–7 s. Holding through a real
+// one pays VITAL ticks; the Pale Monkfish lies — half her glows are fakes.
 export function stepWeakPoint(run, f, dt, input, emit) {
   f.vitalFlash = Math.max(0, f.vitalFlash - dt);
   if (f.wpT > 0) {
@@ -116,10 +108,9 @@ function landEvent(run, f, e, input, emit) {
 }
 
 // The species event clock. Returns the modifiers fishing.js integrates
-// with: armor (stamina flows back at triple rate unless a weak point is
-// being worked) and phaseSlack (the cable hangs loose; reeling is wasted
-// and the distance slips). Landings are applied here, at the frame the
-// telegraph ends, against the input of that exact frame.
+// with: armor (stamina regen triples unless a weak point is worked) and
+// phaseSlack (reeling wasted, distance slips). Landings apply at the
+// frame the telegraph ends, against that frame's input.
 export function stepFightEvents(run, f, dt, input, emit) {
   const mods = { armor: false, phaseSlack: false };
   if (f.spikeT > 0) f.spikeT -= dt;

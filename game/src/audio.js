@@ -1,6 +1,5 @@
-// audio.js — one job: every sound, synthesized with WebAudio. There are no
-// audio files. All entry points no-op until initAudio() runs on a user
-// gesture, and no-op forever if the browser refuses a context.
+// audio.js — one job: every sound, synthesized with WebAudio; no audio
+// files. Entry points no-op until initAudio() runs on a user gesture.
 let ac = null;
 let master = null;
 

@@ -1,5 +1,5 @@
-// render.js — one job: draw the world. Night sea, moon, dock and hunter, the
-// lure and whatever is on the cable, weather mood, particles, the red edge
+// render.js — one job: draw the world. Night sea, moon, dock and hunter,
+// the lure and whatever is on the cable, weather, particles, the red
 // vignette when the cable is about to pop. HUD and screens live in ui.js.
 import { MONSTERS, WEATHERS } from './data.js';
 import { drawFishShape } from './shapes.js';
@@ -7,6 +7,9 @@ import { drawKraken } from './shapes2.js';
 import { drawDressing, drawWeatherFx } from './dressing.js';
 import { drawSkyExtras, drawWaterLife, drawSurfaceDressing, drawDockDetail, drawFightFx } from './scenery.js';
 import { drawTheatre } from './theatre.js';
+import { drawNinja } from './ninja.js';
+import { drawRod } from './tackle.js';
+import { drawHorizonLife } from './terrain.js';
 
 export const WATER_Y = 430;
 const DOCK_X = 168;
@@ -34,7 +37,7 @@ function drawSky(ctx, run, t) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, WATER_Y);
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < 56; i++) {
     const x = (i * 173.3) % 1280;
     const y = 12 + starY(i) * 300;
     if (Math.hypot(x - 1085, y - 92) < 70) continue;
@@ -94,7 +97,7 @@ function drawWater(ctx, run, t) {
   // even under a plain moon; her water remembers.
   const gx = 1085 + Math.sin(t * 0.4) * 22;
   ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : run.sea === 2 ? 'rgba(232,90,70,0.13)' : 'rgba(200,225,245,0.16)';
-  for (let i = 0; i < 13; i++) {
+  for (let i = 0; i < 11; i++) {
     if (Math.sin(i * 3.7 + t * 0.6) > 0.55) continue; // the path breaks, like real glint
     const y = WATER_Y + 12 + i * 17;
     const w = 14 + 26 * Math.abs(Math.sin(i * 1.7 + t * 0.9));
@@ -113,7 +116,7 @@ function drawWater(ctx, run, t) {
   }
 }
 
-function drawDockAndHunter(ctx, run) {
+function drawDock(ctx, run, view, lite) {
   // with the Mother Kraken on the cable the whole dock strains against her
   const strain = run.phase === 'fight' && run.fight && MONSTERS[run.fight.mi].shape === 'kraken';
   if (strain) {
@@ -128,25 +131,8 @@ function drawDockAndHunter(ctx, run) {
   ctx.fillRect(238, 426, 14, 66);
   ctx.fillStyle = '#31241a';
   for (let i = 0; i < 6; i++) ctx.fillRect(28 + i * 41, 411, 36, 4);
-  // the hunter: hat, coat, one arm out to the pole
-  ctx.fillStyle = '#0b0f16';
-  ctx.beginPath();
-  ctx.arc(DOCK_X, 356, 13, 0, 6.29); // head
-  ctx.fill();
-  ctx.fillRect(DOCK_X - 20, 344, 40, 6); // hat brim
-  ctx.fillRect(DOCK_X - 8, 322, 16, 24); // hat crown
-  ctx.beginPath(); // coat
-  ctx.moveTo(DOCK_X - 15, 414);
-  ctx.lineTo(DOCK_X - 9, 368);
-  ctx.lineTo(DOCK_X + 10, 368);
-  ctx.lineTo(DOCK_X + 16, 414);
-  ctx.fill();
-  ctx.strokeStyle = '#0b0f16';
-  ctx.lineWidth = 6;
-  ctx.beginPath(); // arm
-  ctx.moveTo(DOCK_X + 6, 378);
-  ctx.lineTo(DOCK_X + 30, 356);
-  ctx.stroke();
+  // the hunter himself — the Kraken Ninja, posed by the moment (ninja.js)
+  drawNinja(ctx, run, view, lite);
   if (strain) ctx.restore();
 }
 
@@ -157,32 +143,6 @@ export function poleTip(run) {
   if (run.phase === 'fight' && run.fight) bend = run.fight.tension * 0.34;
   if (run.phase === 'wait') bend = 6;
   return { x: 352 + bend * 0.4, y: 296 + bend };
-}
-
-function drawCable(ctx, run, t) {
-  if (run.phase === 'idle' || run.phase === 'charge') return;
-  const tip = poleTip(run);
-  const p = lurePos(run);
-  const fighting = run.phase === 'fight' && run.fight;
-  const tension = fighting ? run.fight.tension : 0;
-  const w = fighting ? 1.6 + (tension / 100) * 2.8 : 1.4;
-  const hot = Math.min(1, tension / 100);
-  ctx.strokeStyle = fighting
-    ? `rgb(${207 + 48 * hot},${216 - 130 * hot},${227 - 160 * hot})`
-    : 'rgba(207,216,227,0.8)';
-  ctx.lineWidth = w;
-  ctx.beginPath();
-  ctx.moveTo(tip.x, tip.y);
-  const sag = fighting ? 26 - tension * 0.18 : 60;
-  ctx.quadraticCurveTo((tip.x + p.x) / 2, Math.min(tip.y, p.y) + sag + Math.sin(t * 2) * 2, p.x, p.y);
-  ctx.stroke();
-  // the pole itself
-  ctx.strokeStyle = '#6b4a2a';
-  ctx.lineWidth = 5;
-  ctx.beginPath();
-  ctx.moveTo(DOCK_X + 26, 360);
-  ctx.quadraticCurveTo(280, 300, tip.x, tip.y);
-  ctx.stroke();
 }
 
 function drawMonster(ctx, run, t) {
@@ -205,10 +165,27 @@ function drawMonster(ctx, run, t) {
       ctx.fillStyle = gg;
       ctx.fillRect(p.x - 30, p.y - 30, 60, 60);
     }
-    ctx.fillStyle = '#ffd94d';
+    // the lure: a little harpoon head riding point-down, gold eye lit
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(0.45 + Math.sin(t * 3) * 0.06);
+    ctx.strokeStyle = '#6b4a2a';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 1); ctx.stroke();
+    ctx.fillStyle = '#cfd8e2';
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 5, 0, 6.29);
+    ctx.moveTo(0, 9); ctx.lineTo(-3.4, 0); ctx.lineTo(3.4, 0);
     ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(0.5, 2); ctx.lineTo(-4.6, -2.5); ctx.lineTo(0.8, -1.5);
+    ctx.fill();
+    ctx.fillStyle = '#ffd94d';
+    ctx.beginPath(); ctx.arc(0, 2, 1.8, 0, 6.29); ctx.fill();
+    if (w.telegraph) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath(); ctx.arc(0, 2, 0.9, 0, 6.29); ctx.fill();
+    }
+    ctx.restore();
     if (w.telegraph || w.dip > 0) {
       ctx.strokeStyle = 'rgba(200,230,250,0.5)';
       ctx.lineWidth = 2;
@@ -249,6 +226,7 @@ export function drawWorld(ctx, run, view, lite = false) {
   drawSky(ctx, run, t);
   if (!lite) drawSkyExtras(ctx, run, t);
   drawWater(ctx, run, t);
+  if (!lite) drawHorizonLife(ctx, run, t);
   drawDressing(ctx, run, t);
   drawWeatherFx(ctx, run, t);
   if (!lite) {
@@ -257,9 +235,9 @@ export function drawWorld(ctx, run, view, lite = false) {
   }
   drawMonster(ctx, run, t);
   if (!lite) drawFightFx(ctx, run, t);
-  drawDockAndHunter(ctx, run);
+  drawRod(ctx, run, view);
+  drawDock(ctx, run, view, lite);
   if (!lite) drawDockDetail(ctx, run, t);
-  drawCable(ctx, run, t);
   // a lone tentacle drifting through the deep seas, pure menace
   if (run.sea >= 1 && run.phase !== 'fight') {
     const tx = 900 + Math.sin(t * 0.21) * 260;

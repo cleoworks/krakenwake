@@ -34,18 +34,16 @@ export function createRun(seed) {
     fight: null,
     events: [],
     result: null, // 'victory' | 'over' once screen === 'end'
-    // --- v2 layers ---
-    difficulty: 0, // index into DIFFICULTIES; main.js sets it from the briefing
-    score: 0, // haul value x combo x difficulty, kept apart from coins
-    boons: [], // salvage-draft boon ids, in the order they were picked
-    draft: null, // { choices: [boonId x3], afterNight } while screen === 'draft'
-    nightStats: { hauls: 0, snaps: 0, coins: 0, score: 0 }, // reset every night
-    nightGrades: [], // one letter per completed night, for the sea route
+    difficulty: 0, // index into DIFFICULTIES; set from the briefing
+    score: 0, // haul value x combo x difficulty, apart from coins
+    boons: [], // draft boon ids, in pick order
+    draft: null, // { choices: [boonId x3], afterNight } on the draft screen
+    nightStats: { hauls: 0, snaps: 0, coins: 0, score: 0 }, // reset nightly
+    nightGrades: [], // one letter per completed night
     feats: {}, // feat id -> true once earned
     charmReady: true, // Sailor's Charm re-arms every night
-    // --- v4 layers ---
-    surgeCharges: 0, // banked SURGE charges (max 2), spent with F in a fight
-    surgeFill: 0, // progress toward the next charge: hauls pay 0.5, vital ticks 0.25
+    surgeCharges: 0, // banked SURGE charges (max 2), spent with F
+    surgeFill: 0, // next-charge progress: hauls 0.5, vital ticks 0.25
   };
 }
 
@@ -63,8 +61,8 @@ export function emptyBest() {
   return { result: '', species: 0, biggestKg: 0, biggestName: '', combo: 0, coins: 0, score: 0, grade: '' };
 }
 
-// The better of two finished runs, for the BEST line: species count first,
-// then score, then biggest haul, then combo, then coins earned.
+// The better of two finished runs, for the BEST line: species, then
+// score, then biggest haul, then combo, then coins.
 export function betterBest(prev, run) {
   const mine = {
     result: run.result === 'victory' ? 'BESTIARY COMPLETE' : `${journalCount(run)}/13 species`,

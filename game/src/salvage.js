@@ -1,7 +1,6 @@
 // salvage.js — one job: the meta layer around the hunt. The boons a run
-// holds, the between-night salvage draft, the grade each night earns, and
-// the camp purchases (moved here from fishing.js so the rules file stays
-// lean). Pure logic, like fishing.js: no DOM, no canvas.
+// holds, the between-night salvage draft, night grades, camp purchases.
+// Pure logic, like fishing.js: no DOM, no canvas.
 import { SEAS, HARPOONS, LURES, BOONS } from './data.js';
 
 export const hasBoon = (run, id) => run.boons.includes(id);
@@ -28,9 +27,9 @@ export function pickBoon(run, id) {
 }
 
 // --- night grades -------------------------------------------------------------
-// Points for work done (hauls), for a decent score, and for a rich one —
-// early seas are cheap, so the grade cannot ride on score alone. A snapped
-// cable costs a point (two or more cost two). No hauls is always a C.
+// Points for hauls and for score (early seas are cheap, so the grade
+// cannot ride on score alone). A snapped cable costs a point, two cost
+// two. No hauls is always a C.
 const GRADE_LETTERS = ['C', 'B', 'A', 'S'];
 export function nightGrade(ns) {
   if (!ns || ns.hauls === 0) return 'C';
@@ -39,7 +38,7 @@ export function nightGrade(ns) {
   return GRADE_LETTERS[Math.max(0, Math.min(3, pts))];
 }
 
-// --- camp actions (used by the camp screen clicks and by the bot) -----------
+// --- camp actions (camp clicks and the bot) ---
 
 export function buyEquip(run, kind, idx) {
   if (kind === 'harpoon') {

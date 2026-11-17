@@ -1,7 +1,5 @@
 // input.js — one job: turn keyboard and pointer into a per-frame input
-// snapshot {hold, pressed, released, pressedKeys} plus a queue of canvas
-// clicks in game coordinates. Space (or holding the pointer) is the one
-// button the whole game is played with.
+// snapshot {hold, pressed, released, pressedKeys} plus canvas clicks.
 export function makeInput(canvas) {
   const held = new Set();
   let pressedKeys = new Set();

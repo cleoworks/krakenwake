@@ -1,10 +1,6 @@
-// theatre.js — one job: stage the fight. Everything the v4 fight needs
-// on screen that render.js had no room for: the telegraph banner, the
-// glowing weak point and its VITAL callout, the kraken's wrap and slam
-// tentacles, the ink wash, a second monster in the mid-distance, and the
-// harpoon's flight. The sea-as-terrain layer and the vignette live in
-// terrain.js; drawTheatre books the act between them. Called from
-// drawWorld after the cable, before the particles.
+// theatre.js — one job: stage the fight. The telegraph banner, the weak
+// point and its VITAL callout, the kraken's wrap and slam tentacles, the
+// ink wash, a second monster mid-distance, and the harpoon's flight.
 import { MONSTERS } from './data.js';
 import { ABILITY_INFO } from './abilities.js';
 import { WATER_Y, lurePos, poleTip } from './render.js';
@@ -12,8 +8,7 @@ import { drawFishShape } from './shapes.js';
 import { drawKraken } from './shapes2.js';
 import { drawSeaTerrain } from './terrain.js';
 
-// the fighting monster's on-screen geometry — the same numbers render.js
-// draws it with, so the weak point lands on the body
+// the fighting monster's on-screen geometry, so the weak point lands true
 function monsterGeom(run) {
   const f = run.fight;
   const p = lurePos(run);
@@ -62,26 +57,35 @@ function drawHarpoonTrail(ctx, run, t) {
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  // the harpoon head itself, angled along the flight
+  // the harpoon itself in flight: short shaft, barbed head, angled true
   const ang = Math.atan2(target.y - tip.y, target.x - tip.x);
   ctx.save();
   ctx.translate(hx, hy);
-  ctx.rotate(ang);
+  ctx.rotate(ang + Math.sin(t * 26) * 0.05);
+  ctx.strokeStyle = '#6b4a2a';
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-16, 0); ctx.lineTo(-4, 0); ctx.stroke();
   ctx.fillStyle = '#cfd8e2';
   ctx.beginPath();
   ctx.moveTo(10, 0);
   ctx.lineTo(-5, -4.4);
   ctx.lineTo(-5, 4.4);
   ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-3, -1);
+  ctx.lineTo(-9, -6);
+  ctx.lineTo(-1.5, -4.6);
+  ctx.fill();
   ctx.restore();
 }
 
-// --- the kraken, close: a wrap on the dock post, a slam rearing -----------
+// --- the kraken, close: a wrap on the dock post, a slam rearing ---
 function drawKrakenTheatre(ctx, run, t) {
   const f = run.fight;
   if (MONSTERS[f.mi].shape !== 'kraken') return;
   const g = monsterGeom(run);
-  // one long tentacle has hold of the dock's end post and is pulling
+  // one long tentacle has hold of the dock's end post
   ctx.strokeStyle = '#07090f';
   ctx.lineCap = 'round';
   ctx.lineWidth = Math.max(7, g.s * 0.13);
@@ -103,8 +107,7 @@ function drawKrakenTheatre(ctx, run, t) {
     ctx.arc(bx, WATER_Y - 12 - q * 8, 2.6, 0, 6.29);
     ctx.fill();
   }
-  // the slam, telegraphed: a tentacle rears at the kraken's right shoulder,
-  // taller the closer the landing is
+  // the slam, telegraphed: a tentacle rears, taller as the landing nears
   if (f.event && f.event.id === 'slam' && f.event.phase === 'tele') {
     const q = 1 - Math.max(0, f.event.t) / 1.0;
     const bx = g.x + g.s * 0.92;
@@ -115,11 +118,18 @@ function drawKrakenTheatre(ctx, run, t) {
     ctx.moveTo(bx, WATER_Y + 4);
     ctx.quadraticCurveTo(bx + g.s * 0.22, WATER_Y - h * 0.6, bx - g.s * 0.12 + Math.sin(t * 6) * 3, WATER_Y - h);
     ctx.stroke();
-    ctx.fillStyle = 'rgba(238,205,192,0.55)';
-    for (const tt of [0.35, 0.6, 0.85]) {
-      ctx.beginPath();
-      ctx.arc(bx + g.s * 0.1 - tt * g.s * 0.14, WATER_Y - h * tt, 3, 0, 6.29);
-      ctx.fill();
+    ctx.strokeStyle = 'rgba(190,205,225,0.18)'; // the ridge of light down its back
+    ctx.lineWidth = Math.max(1.4, g.s * 0.03);
+    ctx.beginPath();
+    ctx.moveTo(bx - g.s * 0.08, WATER_Y + 2);
+    ctx.quadraticCurveTo(bx + g.s * 0.12, WATER_Y - h * 0.6, bx - g.s * 0.2 + Math.sin(t * 6) * 3, WATER_Y - h * 0.98);
+    ctx.stroke();
+    for (const tt of [0.35, 0.6, 0.85]) { // suckers: a dark rim, a pale face
+      const sx = bx + g.s * 0.1 - tt * g.s * 0.14, sy = WATER_Y - h * tt;
+      ctx.fillStyle = 'rgba(30,16,14,0.8)';
+      ctx.beginPath(); ctx.arc(sx, sy, 3.9, 0, 6.29); ctx.fill();
+      ctx.fillStyle = 'rgba(238,205,192,0.55)';
+      ctx.beginPath(); ctx.arc(sx, sy, 3, 0, 6.29); ctx.fill();
     }
     ctx.strokeStyle = 'rgba(255,80,64,0.5)';
     ctx.lineWidth = 2;
@@ -135,7 +145,7 @@ function drawWeakPoint(ctx, run, t) {
   if (!(f.wpT > 0)) return;
   const p = weakPointPos(run);
   if (f.wpFake) {
-    // the monkfish's lie: pale blue, small, and cold — no halo, no pulse
+    // the monkfish's lie: pale blue, small, and cold — no halo
     ctx.strokeStyle = 'rgba(168,200,232,0.85)';
     ctx.lineWidth = 2;
     ctx.beginPath();

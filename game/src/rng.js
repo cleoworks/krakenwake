@@ -1,5 +1,5 @@
-// rng.js — one job: a small deterministic seeded RNG (mulberry32) so the
-// seeded bot proof and the staged screenshots always play out the same way.
+// rng.js — one job: a small deterministic seeded RNG (mulberry32), so the
+// bot proof and the staged screenshots always play out the same way.
 export function makeRng(seed) {
   let a = seed >>> 0;
   const next = () => {
