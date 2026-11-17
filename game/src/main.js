@@ -3,7 +3,7 @@
 // triggers, the attract demo, and the staged ?shot= states.
 import { MONSTERS, FEATS } from './data.js';
 import { createRun, journalCount, emptyBest, betterBest, gradeForScore } from './state.js';
-import { step } from './fishing.js';
+import { step } from './fight.js';
 import { buyEquip, pickBoon } from './salvage.js';
 import { makeBot, botShop, botDraft } from './bot.js';
 import { makeInput } from './input.js';
@@ -30,10 +30,10 @@ function loadJson(key) {
 function saveJson(key, val) {
   try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* private mode */ }
 }
-let best = { ...emptyBest(), ...(loadJson('krakenwake-best') || {}) };
+let best = { ...emptyBest(), ...(loadJson('wyrmwake-best') || {}) };
 if (!best.result) best = emptyBest();
-let last = loadJson('krakenwake-last');
-let difficultySel = loadJson('krakenwake-difficulty') ?? 0;
+let last = loadJson('wyrmwake-last');
+let difficultySel = loadJson('wyrmwake-difficulty') ?? 0;
 
 let run = createRun((Math.random() * 1e9) | 0);
 run.screen = 'title';
@@ -69,13 +69,13 @@ function drainEvents(r) {
       burst(p.x, p.y, 20, ['#dff2ff', '#9fd0ee', '#ffffff'], 210, 5);
       sfx.splash();
     } else if (e.type === 'haul') {
-      (r.tonightHauls ??= []).push({ mi: e.mi, kg: e.kg, coins: e.coins });
+      (r.tonightHauls ??= []).push({ mi: e.mi, coins: e.coins });
       const p = lastFightPos || lurePos(r);
       burst(p.x, p.y - 10, 22, ['#ffd94d', '#ffb52e', '#fff2b0'], 240, 5);
       sfx.coin();
-      sfx.thud(e.kg);
+      sfx.thud(MONSTERS[e.mi].bulk);
       view.comboPop = 1;
-      view.toast = { title: `${MONSTERS[e.mi].name} — ${e.kg.toFixed(1)} kg`, sub: `+${e.coins} coins • +${e.score} score • combo ×${r.combo}` };
+      view.toast = { title: `${MONSTERS[e.mi].name} hauled in!`, sub: `+${e.coins} coins • +${e.score} score • combo ×${r.combo}` };
       view.toastT = 2.2;
     } else if (e.type === 'feat') {
       const f = FEATS.find((ff) => ff.id === e.id);
@@ -85,7 +85,7 @@ function drainEvents(r) {
         sfx.feat();
       }
     } else if (e.type === 'charm') {
-      view.toast = { title: "Sailor's Charm!", sub: 'The cable parts — but the combo survives.' };
+      view.toast = { title: "Sailor's Charm!", sub: 'The chain parts — but the combo survives.' };
       view.toastT = 2.2;
       sfx.charm();
     } else if (e.type === 'snap') { sfx.snap(); view.shake = 9; }
@@ -101,14 +101,14 @@ function drainEvents(r) {
     }
     else if (e.type === 'end') {
       best = betterBest(best, r);
-      saveJson('krakenwake-best', best);
+      saveJson('wyrmwake-best', best);
       last = {
         result: r.result === 'victory' ? 'BESTIARY COMPLETE' : `${journalCount(r)}/13 species`,
         species: journalCount(r),
         score: r.score,
         grade: gradeForScore(r.score),
       };
-      saveJson('krakenwake-last', last);
+      saveJson('wyrmwake-last', last);
       if (e.result === 'victory') sfx.win();
     }
   }
@@ -198,7 +198,7 @@ function frame(ts) {
       for (const d of diffs) {
         if (c.x >= d.x && c.x <= d.x + d.w && c.y >= d.y && c.y <= d.y + d.h) {
           difficultySel = d.idx;
-          saveJson('krakenwake-difficulty', difficultySel);
+          saveJson('wyrmwake-difficulty', difficultySel);
           sfx.click();
           consumed = true;
         }
@@ -212,7 +212,7 @@ function frame(ts) {
     for (const k of ['Digit1', 'Digit2', 'Digit3']) {
       if (snap.pressedKeys.has(k)) {
         difficultySel = Number(k.slice(-1)) - 1;
-        saveJson('krakenwake-difficulty', difficultySel);
+        saveJson('wyrmwake-difficulty', difficultySel);
         sfx.click();
         consumed = true;
       }

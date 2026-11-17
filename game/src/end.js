@@ -11,7 +11,7 @@ export function drawEnd(ctx, run, best) {
   const won = run.result === 'victory';
   const grade = gradeForScore(run.score);
   text(ctx, won ? '🏆 VICTORY!' : '🌅 THE SEASON ENDS', 640, 88, 44, '#ffd94d', 'center', 800);
-  text(ctx, won ? 'Bestiary complete — all 13 monsters hauled!' : `The bestiary stands at ${journalCount(run)}/13 — the Kraken still waits.`, 640, 122, 21, '#eaf6ff', 'center');
+  text(ctx, won ? 'Bestiary complete — all 13 monsters hauled!' : `The bestiary stands at ${journalCount(run)}/13 — the Wyrm still waits.`, 640, 122, 21, '#eaf6ff', 'center');
   // the grade medal, top right
   ctx.fillStyle = GRADE_COLORS[grade];
   ctx.beginPath();
@@ -24,7 +24,7 @@ export function drawEnd(ctx, run, best) {
   text(ctx, 'SEASON GRADE', 986, 166, 12, '#8fb8d4', 'center', 800);
 
   const stats = [
-    ['Biggest haul', run.biggestName ? `${run.biggestName} — ${run.biggestKg.toFixed(1)} kg` : '—', 'Score', `${run.score}`],
+    ['King Wyrm', run.feats.wyrm ? 'Hauled — Wyrm Slayer' : 'Still waiting', 'Score', `${run.score}`],
     ['Longest combo', `×${run.bestCombo}`, 'Peak tension', `${Math.round(run.peakTension)}%`],
     ['Total throws', `${run.throws}`, 'Monsters hauled', `${run.hauled}`],
     ['Coins earned', `${run.coinsEarned} 🪙`, 'Difficulty', `${DIFFICULTIES[run.difficulty].name} ×${DIFFICULTIES[run.difficulty].mult.toFixed(1)}`],
@@ -60,11 +60,11 @@ export function drawEnd(ctx, run, best) {
   });
 
   const goal = won
-    ? `Next goal: haul a Mother Kraken heavier than ${run.biggestKg.toFixed(1)} kg`
-    : nextGoal({ result: 'x', species: journalCount(run), biggestKg: run.biggestKg });
+    ? `Next goal: beat your score of ${run.score}`
+    : nextGoal({ result: 'x', species: journalCount(run) });
   text(ctx, goal, 640, 626, 20, '#ffd94d', 'center');
   if (best && best.result) {
-    text(ctx, `BEST: ${best.result} • grade ${best.grade || '—'} • score ${best.score || 0} • biggest ${best.biggestName} ${best.biggestKg.toFixed(1)} kg • combo ×${best.combo} • ${best.coins} 🪙`, 640, 654, 17.5, '#ffe9a8', 'center', 400);
+    text(ctx, `BEST: ${best.result} • grade ${best.grade || '—'} • score ${best.score || 0} • combo ×${best.combo} • ${best.coins} 🪙`, 640, 654, 17.5, '#ffe9a8', 'center', 400);
   }
   text(ctx, 'Press R to sail again', 640, 682, 22, '#7fd4ff', 'center', 800);
 }

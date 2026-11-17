@@ -5,8 +5,8 @@
 import { MONSTERS, SEAS, DIFFICULTIES } from './data.js';
 import { text, panel, rr } from './ui.js';
 import { drawWorld } from './render.js';
-import { drawFishShape } from './shapes.js';
-import { drawKraken } from './shapes2.js';
+import { drawFishShape } from './vendor/shapes.js';
+import { drawWyrmGlyph } from './vendor/wyrm.js';
 
 export function briefingLayout() {
   const diffs = DIFFICULTIES.map((d, i) => ({ idx: i, x: 40 + i * 410, y: 474, w: 380, h: 56 }));
@@ -21,14 +21,14 @@ function pill(ctx, x, label, line, color) {
 }
 
 function stepCard(ctx, x, n, title, lines, icon) {
-  panel(ctx, x, 236, 380, 112, 0.8);
+  panel(ctx, x, 236, 285, 120, 0.8);
   ctx.fillStyle = '#ffb52e';
   ctx.beginPath();
   ctx.arc(x + 30, 266, 15, 0, 6.29);
   ctx.fill();
   text(ctx, `${n}`, x + 30, 273, 19, '#0b1420', 'center', 800);
   text(ctx, title, x + 56, 274, 22, '#ffd94d', 'left', 800);
-  lines.forEach((ln, i) => text(ctx, ln, x + 20, 306 + i * 21, 16, '#cfe8ff', 'left', 400));
+  lines.forEach((ln, i) => text(ctx, ln, x + 20, 304 + i * 20, 15, '#cfe8ff', 'left', 400));
   icon(ctx, x);
 }
 
@@ -59,34 +59,43 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, 720);
 
-  text(ctx, 'KRAKENWAKE', 640, 94, 76, '#ffd94d', 'center', 800);
-  text(ctx, 'Harpoon the deep. Fill the bestiary. Kill the Mother Kraken.', 640, 130, 24, '#eaf6ff', 'center');
+  text(ctx, 'WYRMWAKE', 640, 94, 76, '#ffd94d', 'center', 800);
+  text(ctx, 'Harpoon the deep. Fill the bestiary. Kill the King Wyrm.', 640, 130, 24, '#eaf6ff', 'center');
 
   pill(ctx, 24, '🎯 GOAL', 'Fill the 13-monster bestiary', '#7fd4ff');
   pill(ctx, 440, '🏆 WIN', 'Bestiary complete within 6 nights', '#39d353');
   pill(ctx, 856, '☠ LOSE', 'Night 6 ends, bestiary unfinished', '#ff8a7a');
 
   text(ctx, 'HOW TO HUNT', 40, 226, 18, '#8fb8d4', 'left', 800);
-  stepCard(ctx, 40, 1, 'THROW', ['Hold SPACE to charge, release to throw.', 'Long casts reach the deeper water.'], (c, x) => {
+  stepCard(ctx, 40, 1, 'THROW', ['Hold SPACE to charge,', 'release to hurl the', 'harpoon by hand.'], (c, x) => {
     c.fillStyle = 'rgba(255,255,255,0.18)';
-    rr(c, x + 268, 254, 92, 12, 6);
+    rr(c, x + 180, 254, 88, 12, 6);
     c.fill();
     c.fillStyle = '#7fd4ff';
-    rr(c, x + 268, 254, 58, 12, 6);
+    rr(c, x + 180, 254, 56, 12, 6);
     c.fill();
   });
-  stepCard(ctx, 450, 2, 'STRIKE', ['Wait for the telegraph — the lure dips,', 'rings spread. Strike the instant it bites.'], (c, x) => {
-    text(c, '!', x + 316, 282, 44, '#ffd94d', 'center', 800);
+  stepCard(ctx, 345, 2, 'STRIKE', ['When a weak point glows,', 'hold SPACE on it — hits', 'drain its STAMINA fast.'], (c, x) => {
+    text(c, '!', x + 238, 282, 44, '#ffd94d', 'center', 800);
   });
-  stepCard(ctx, 860, 3, 'HAUL', ['Hold to reel, release to slacken. Work the', 'gold weak point; answer warnings; F = Surge.'], (c, x) => {
+  stepCard(ctx, 650, 3, 'DASH', ['Telegraphs: LET GO to', 'slacken, or DASH (Shift/J)', 'through — perfect: COUNTER!'], (c, x) => {
+    c.fillStyle = '#9fe8ff';
+    rr(c, x + 196, 250, 56, 7, 3);
+    c.fill();
+    rr(c, x + 186, 263, 44, 7, 3);
+    c.fill();
+    rr(c, x + 176, 276, 32, 7, 3);
+    c.fill();
+  });
+  stepCard(ctx, 955, 4, 'HAUL', ['Empty its STAMINA, then', 'HOLD to haul it in. Red', 'TENSION snaps the chain.'], (c, x) => {
     c.fillStyle = '#39d353';
-    rr(c, x + 262, 254, 40, 12, 3);
+    rr(c, x + 172, 254, 38, 12, 3);
     c.fill();
     c.fillStyle = '#ffb52e';
-    rr(c, x + 302, 254, 26, 12, 3);
+    rr(c, x + 212, 254, 24, 12, 3);
     c.fill();
     c.fillStyle = '#ff5040';
-    rr(c, x + 328, 254, 32, 12, 3);
+    rr(c, x + 238, 254, 30, 12, 3);
     c.fill();
   });
 
@@ -99,7 +108,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
     let x = 240 + ctx.measureText(`${sea.name}: `).width + 2;
     const list = MONSTERS.filter((m) => m.sea === si);
     list.forEach((m, mi) => {
-      if (m.shape === 'kraken') drawKraken(ctx, x + 10, y - 3, 9, 1.35);
+      if (m.shape === 'wyrm') drawWyrmGlyph(ctx, x + 10, y - 3, 9, m.color, '#0b1420');
       else drawFishShape(ctx, m.shape, x + 10, y - 4, 9, m.color, '#0b1420');
       x += 24;
       const nm = m.name.toUpperCase();
@@ -113,6 +122,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   });
 
   text(ctx, 'DIFFICULTY', 40, 464, 18, '#8fb8d4', 'left', 800);
+  text(ctx, '🔔 The King Wyrm answers only to the Doom Bell lure — buy it at camp, ring it in Wyrm\'s Maw.', 190, 464, 14, '#ffd94d', 'left', 400);
   const { diffs, sail } = briefingLayout();
   for (const d of diffs) {
     const def = DIFFICULTIES[d.idx];
@@ -133,7 +143,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   text(ctx, 'BEST HUNT', 60, 578, 17, '#8fb8d4', 'left', 800);
   if (best && best.result) {
     text(ctx, `${best.result} — GRADE ${best.grade || '—'} • SCORE ${best.score || 0}`, 60, 606, 18.5, '#ffe9a8');
-    text(ctx, `biggest ${best.biggestName} ${best.biggestKg.toFixed(1)} kg • combo ×${best.combo} • ${best.coins} 🪙`, 60, 632, 16.5, '#cfe8ff', 'left', 400);
+    text(ctx, `best combo ×${best.combo} • ${best.coins} 🪙 earned`, 60, 632, 16.5, '#cfe8ff', 'left', 400);
   } else {
     text(ctx, 'No hunts yet — the bestiary is unwritten.', 60, 606, 17, '#cfe8ff', 'left', 400);
   }

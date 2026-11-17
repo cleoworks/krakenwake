@@ -1,20 +1,21 @@
 // render.js — one job: draw the world. Night sea, moon, dock and hunter,
-// the lure and whatever is on the cable, weather, particles, the red
-// vignette when the cable is about to pop. HUD and screens live in ui.js.
+// the lure and whatever is on the chain, weather, particles, the red
+// vignette when the chain is about to snap. HUD and screens live in ui.js.
 import { MONSTERS, WEATHERS } from './data.js';
-import { drawFishShape } from './shapes.js';
-import { drawKraken } from './shapes2.js';
+import { drawFishShape } from './vendor/shapes.js';
+import { drawWyrm } from './vendor/wyrm.js';
 import { drawDressing, drawWeatherFx } from './dressing.js';
-import { drawSkyExtras, drawWaterLife, drawSurfaceDressing, drawDockDetail, drawFightFx } from './scenery.js';
+import { drawSkyExtras, drawWaterLife, drawSurfaceDressing, drawDockDetail, drawFightFx } from './vendor/scenery.js';
 import { drawTheatre } from './theatre.js';
 import { drawNinja } from './ninja.js';
-import { drawRod } from './tackle.js';
+import { drawChain } from './chain.js';
 import { drawHorizonLife } from './terrain.js';
 
 export const WATER_Y = 430;
 const DOCK_X = 168;
+export const MOON_X = 300, MOON_Y = 205; // open sky left of the callout column — no panel, bar or wyrm covers it
 
-// where the business end of the cable is, in pixels, for a distance in metres
+// where the business end of the chain is, in pixels, for a distance in metres
 export const castX = (dist) => 400 + dist * 6.4;
 export function lurePos(run) {
   if (run.phase === 'fight' && run.fight) {
@@ -27,38 +28,46 @@ export function lurePos(run) {
   return { x: castX(60), y: WATER_Y + 8 };
 }
 
+// Where the fight's callout column stands. Over a fish it sits on the
+// fish; the King Wyrm is too big to shout across — his column steps
+// left, over open water, clear of the coils and the neck.
+export function calloutX(run) {
+  const p = lurePos(run);
+  if (run.phase === 'fight' && run.fight && MONSTERS[run.fight.mi].shape === 'wyrm') {
+    return Math.max(300, p.x - 330);
+  }
+  return p.x;
+}
+
 // stars from a fixed hash so every frame (and every screenshot) agrees
 function starY(i) { return ((i * 2654435761) % 1000) / 1000; }
 function drawSky(ctx, run, t) {
   const blood = WEATHERS[run.weatherIdx].name === 'Blood Moon';
   const g = ctx.createLinearGradient(0, 0, 0, WATER_Y);
-  g.addColorStop(0, blood ? '#120a1e' : '#050914');
-  g.addColorStop(1, blood ? '#2a1226' : '#132740');
+  g.addColorStop(0, blood ? '#1e1030' : '#081226');
+  g.addColorStop(1, blood ? '#472040' : '#1f3c5c');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, WATER_Y);
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < 30; i++) {
     const x = (i * 173.3) % 1280;
     const y = 12 + starY(i) * 300;
-    if (Math.hypot(x - 1085, y - 92) < 70) continue;
+    if (Math.hypot(x - MOON_X, y - MOON_Y) < 84) continue;
     ctx.globalAlpha = 0.25 + 0.5 * Math.abs(Math.sin(t * 0.7 + i));
     ctx.fillRect(x, y, 2, 2);
   }
   ctx.globalAlpha = 1;
-  // moon (red under a Blood Moon) with a soft halo — a stroked ring, not a
-  // radial-gradient field: the gradient cost too many PNG bytes
-  ctx.strokeStyle = blood ? 'rgba(232,72,63,0.28)' : 'rgba(210,228,244,0.22)';
-  ctx.lineWidth = 12;
-  ctx.beginPath();
-  ctx.arc(1085, 92, 54, 0, 6.29);
-  ctx.stroke();
+  // moon — a huge blood moon in the Maw's sky, a plain disc elsewhere,
+  // riding the open sky left of centre where no panel covers it. No
+  // halo ring: a plain bright disc reads cleaner and costs less PNG.
+  const mr = blood ? 64 : 40;
   ctx.fillStyle = blood ? '#e8483f' : '#e8eef4';
   ctx.beginPath();
-  ctx.arc(1085, 92, 44, 0, 6.29);
+  ctx.arc(MOON_X, MOON_Y, mr, 0, 6.29);
   ctx.fill();
   ctx.fillStyle = blood ? 'rgba(120,20,16,0.35)' : 'rgba(160,175,190,0.35)';
   ctx.beginPath();
-  ctx.arc(1070, 80, 9, 0, 6.29); ctx.arc(1102, 108, 6, 0, 6.29);
+  ctx.arc(MOON_X - 15 * (mr / 44), MOON_Y - 12 * (mr / 44), 9 * (mr / 44), 0, 6.29); ctx.arc(MOON_X + 17 * (mr / 44), MOON_Y + 16 * (mr / 44), 6 * (mr / 44), 0, 6.29);
   ctx.fill();
   // far hills, then a nearer parallax ridge rolling the other way
   ctx.fillStyle = '#0a1522';
@@ -77,29 +86,29 @@ function drawSky(ctx, run, t) {
 function drawWater(ctx, run, t) {
   const blood = WEATHERS[run.weatherIdx].name === 'Blood Moon';
   const g = ctx.createLinearGradient(0, WATER_Y, 0, 720);
-  g.addColorStop(0, blood ? '#243a56' : '#1a3a56');
-  g.addColorStop(1, '#081426');
+  g.addColorStop(0, blood ? '#3a5c80' : '#27536f');
+  g.addColorStop(1, '#0a1a30');
   ctx.fillStyle = g;
   ctx.fillRect(0, WATER_Y, 1280, 720 - WATER_Y);
   // swell lines drifting
   ctx.strokeStyle = 'rgba(160,210,240,0.13)';
   ctx.lineWidth = 2;
-  for (let row = 0; row < 3; row++) {
-    const y = WATER_Y + 26 + row * 52;
+  for (let row = 0; row < 2; row++) {
+    const y = WATER_Y + 26 + row * 64;
     ctx.beginPath();
-    for (let x = 0; x <= 1280; x += 32) {
+    for (let x = 0; x <= 1280; x += 58) {
       const yy = y + Math.sin(x * 0.012 + t * (0.7 + row * 0.13) + row * 2) * 4;
       x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
     }
     ctx.stroke();
   }
   // the moon-glint column, sliding slowly on the swell — red in the Maw
-  // even under a plain moon; her water remembers.
-  const gx = 1085 + Math.sin(t * 0.4) * 22;
+  // even under a plain moon; its water remembers.
+  const gx = MOON_X + Math.sin(t * 0.4) * 22;
   ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : run.sea === 2 ? 'rgba(232,90,70,0.13)' : 'rgba(200,225,245,0.16)';
-  for (let i = 0; i < 11; i++) {
+  for (let i = 0; i < 7; i++) {
     if (Math.sin(i * 3.7 + t * 0.6) > 0.55) continue; // the path breaks, like real glint
-    const y = WATER_Y + 12 + i * 17;
+    const y = WATER_Y + 12 + i * 22;
     const w = 14 + 26 * Math.abs(Math.sin(i * 1.7 + t * 0.9));
     ctx.fillRect(gx - w / 2 + Math.sin(i * 2.3 + t) * 7, y, w, 3);
   }
@@ -117,8 +126,8 @@ function drawWater(ctx, run, t) {
 }
 
 function drawDock(ctx, run, view, lite) {
-  // with the Mother Kraken on the cable the whole dock strains against her
-  const strain = run.phase === 'fight' && run.fight && MONSTERS[run.fight.mi].shape === 'kraken';
+  // with the King Wyrm on the chain the whole dock strains against him
+  const strain = run.phase === 'fight' && run.fight && MONSTERS[run.fight.mi].shape === 'wyrm';
   if (strain) {
     ctx.save();
     ctx.translate(150, 414);
@@ -131,18 +140,9 @@ function drawDock(ctx, run, view, lite) {
   ctx.fillRect(238, 426, 14, 66);
   ctx.fillStyle = '#31241a';
   for (let i = 0; i < 6; i++) ctx.fillRect(28 + i * 41, 411, 36, 4);
-  // the hunter himself — the Kraken Ninja, posed by the moment (ninja.js)
+  // the hunter himself — the Wyrm Ninja, posed by the moment (ninja.js)
   drawNinja(ctx, run, view, lite);
   if (strain) ctx.restore();
-}
-
-// pole tip: bends back on the charge, strains down under tension
-export function poleTip(run) {
-  let bend = 0;
-  if (run.phase === 'charge') bend = -run.charge * 26;
-  if (run.phase === 'fight' && run.fight) bend = run.fight.tension * 0.34;
-  if (run.phase === 'wait') bend = 6;
-  return { x: 352 + bend * 0.4, y: 296 + bend };
 }
 
 function drawMonster(ctx, run, t) {
@@ -205,14 +205,16 @@ function drawMonster(ctx, run, t) {
     const m = MONSTERS[f.mi];
     const p = lurePos(run);
     const near = Math.max(0, 1 - f.dist / 95);
-    if (m.shape === 'kraken') {
-      // her beak gapes while she thrashes — the same surge signal the
-      // THRASHING! callout reads
+    if (m.shape === 'wyrm') {
+      // his jaw gapes while he thrashes — the same surge signal the
+      // THRASHING! callout reads; on the slam telegraph he rears back
       const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
       const maw = Math.min(1, Math.max(0, (surge01 - 0.78) / 0.22) * 1.3);
-      drawKraken(ctx, p.x, WATER_Y + 6, 85 + near * 85, t, undefined, maw);
+      const rear = f.event && f.event.id === 'slam' && f.event.phase === 'tele'
+        ? Math.min(1, Math.max(0, 1 - f.event.t / 1.0)) : 0;
+      drawWyrm(ctx, p.x, WATER_Y + 6, 150 + near * 45, t, '#ff5040', maw, rear);
     } else {
-      const s = 20 + near * 30 + Math.min(16, f.kg * 0.3);
+      const s = 20 + near * 30 + m.bulk;
       const bob = Math.sin(t * 2.2) * 3;
       drawFishShape(ctx, m.shape, p.x, WATER_Y - 4 - near * 12 + bob, s, '#0a1420', '#ff5040');
       // foam at the surface line
@@ -239,18 +241,25 @@ export function drawWorld(ctx, run, view, lite = false) {
   }
   drawMonster(ctx, run, t);
   if (!lite) drawFightFx(ctx, run, t);
-  drawRod(ctx, run, view);
+  drawChain(ctx, run, view);
   drawDock(ctx, run, view, lite);
   if (!lite) drawDockDetail(ctx, run, t);
-  // a lone tentacle drifting through the deep seas, pure menace
+  // a lone coil of something vast drifting through the deep seas
   if (run.sea >= 1 && run.phase !== 'fight') {
     const tx = 900 + Math.sin(t * 0.21) * 260;
     ctx.strokeStyle = 'rgba(5,8,14,0.8)';
-    ctx.lineWidth = 15; ctx.lineCap = 'round';
+    ctx.lineWidth = 13; ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(tx, 700);
-    ctx.quadraticCurveTo(tx + 26, 620, tx - 8, 556 + Math.sin(t * 0.9) * 8);
+    ctx.moveTo(tx - 30, 700);
+    ctx.quadraticCurveTo(tx, 596 + Math.sin(t * 0.9) * 8, tx + 34, 700);
     ctx.stroke();
+    ctx.fillStyle = 'rgba(5,8,14,0.8)'; // the crest spikes on the coil
+    for (const k of [-0.5, 0, 0.5]) {
+      const px = tx + k * 30, py = 634 + Math.sin(t * 0.9) * 8 + Math.abs(k) * 16;
+      ctx.beginPath();
+      ctx.moveTo(px - 6, py + 8); ctx.lineTo(px, py - 8); ctx.lineTo(px + 6, py + 8);
+      ctx.fill();
+    }
   }
   if (!lite) drawTheatre(ctx, run, t);
   // particles (splash bursts, coin bursts)
@@ -260,7 +269,7 @@ export function drawWorld(ctx, run, view, lite = false) {
     ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
   }
   ctx.globalAlpha = 1;
-  // the cable is about to pop: pulse a red vignette at the edges
+  // the chain is about to pop: pulse a red vignette at the edges
   if (run.phase === 'fight' && run.fight && run.fight.tension > 85) {
     const a = 0.13 + 0.09 * Math.sin(t * 11);
     const vg = ctx.createRadialGradient(640, 360, 300, 640, 360, 760);

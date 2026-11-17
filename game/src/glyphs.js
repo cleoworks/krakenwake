@@ -13,7 +13,7 @@ export function drawBoonGlyph(ctx, id, cx, cy, s) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   switch (id) {
-    case 'cable': // a coiled line: three turns of rope settling into a loop
+    case 'cable': // a coiled chain: three turns settling into a loop
       for (const r of [0.78, 0.52, 0.27]) {
         ctx.beginPath();
         ctx.arc(0, 0, s * r, 0.4, 5.6);
@@ -146,7 +146,7 @@ export function drawBoonGlyph(ctx, id, cx, cy, s) {
         ctx.stroke();
       }
       break;
-    case 'sinkers': // a heavy sinker on its chain
+    case 'sinkers': // heavy chain links, settling
       ctx.beginPath();
       ctx.arc(0, -s * 0.78, s * 0.17, 0, 6.29);
       ctx.stroke();

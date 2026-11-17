@@ -1,4 +1,4 @@
-// fishing.js — one job: the rules of the hunt, as pure logic. createRun lives
+// fight.js — one job: the rules of the hunt, as pure logic. createRun lives
 // in state.js; step() advances a run by dt given {hold, pressed, released}.
 // No DOM, no canvas, no audio: Node imports this file for the seeded proof.
 import { MONSTERS, HARPOONS, LURES, WEATHERS, DIFFICULTIES, NIGHT_SECONDS, SEASON_NIGHTS, poolFor } from './data.js';
@@ -48,7 +48,7 @@ function endNight(run) {
   ev(run, 'draft', { afterNight: run.draft.afterNight });
 }
 
-// Which monster answers the lure: this sea's pool, the Kraken only when the
+// Which monster answers the lure: this sea's pool, the Wyrm only when the
 // Doom Bell rings, uncaught monsters far more likely, rares boosted by weather.
 function pickMonster(run) {
   const lure = LURES[run.lure];
@@ -89,11 +89,7 @@ function startWait(run) {
 
 function startFight(run) {
   const mi = pickMonster(run);
-  const m = MONSTERS[mi];
-  // Heavy Sinkers flatten the weight roll: heavier specimens take the lure.
-  const roll = hasBoon(run, 'sinkers') ? Math.pow(run.rng.next(), 0.85) : Math.pow(run.rng.next(), 1.25);
-  const kg = m.kgMin + roll * (m.kgMax - m.kgMin);
-  run.fight = { mi, kg, dist: run.castDist, tension: 12, t: 0, snapT: 0, surgePhase: run.rng.range(0, 6.28), stamina: 100 };
+  run.fight = { mi, dist: run.castDist, tension: 12, t: 0, snapT: 0, surgePhase: run.rng.range(0, 6.28), stamina: 100 };
   initFightFx(run, run.fight);
   run.wait = null;
   run.phase = 'fight';
@@ -105,9 +101,11 @@ function haul(run) {
   const f = run.fight;
   const m = MONSTERS[f.mi];
   const comboMult = 1 + 0.1 * run.combo;
-  const gained = Math.round((6 + f.kg * m.vpk) * comboMult);
+  // a haul pays the species' price; Heavy Sinkers sweeten every haul
+  const sinkersMult = hasBoon(run, 'sinkers') ? 1.1 : 1;
+  const gained = Math.round(m.price * comboMult * sinkersMult);
   // SCORE is its own currency: haul value x combo x difficulty.
-  const scoreGain = Math.round((6 + f.kg * m.vpk) * comboMult * DIFFICULTIES[run.difficulty].mult);
+  const scoreGain = Math.round(m.price * comboMult * sinkersMult * DIFFICULTIES[run.difficulty].mult);
   run.coins += gained;
   run.coinsEarned += gained;
   run.score += scoreGain;
@@ -120,16 +118,11 @@ function haul(run) {
   run.hauled += 1;
   const b = run.bestiary[f.mi];
   b.count += 1;
-  b.bestKg = Math.max(b.bestKg, f.kg);
-  if (f.kg > run.biggestKg) {
-    run.biggestKg = f.kg;
-    run.biggestName = m.name;
-  }
   earnFeat(run, 'first');
-  if (f.kg >= 50) earnFeat(run, 'heavy');
-  if (f.mi === 12) earnFeat(run, 'kraken');
+  if (m.bulk >= 7.5) earnFeat(run, 'heavy');
+  if (f.mi === 12) earnFeat(run, 'wyrm');
   if (run.bestCombo >= 8) earnFeat(run, 'combo8');
-  ev(run, 'haul', { mi: f.mi, kg: f.kg, coins: gained, score: scoreGain });
+  ev(run, 'haul', { mi: f.mi, coins: gained, score: scoreGain });
   run.fight = null;
   run.phase = 'idle';
   if (journalCount(run) >= 13) finish(run, 'victory');
@@ -165,10 +158,10 @@ function stepWait(run, dt, input) {
   }
 }
 
-// The fight, with stamina: a FRESH monster pulls at full strength and reels
-// in slowly. Holding the cable in the yellow/red drains it; thrashing drains
+// The fight, with stamina: a FRESH monster pulls at full strength and hauls
+// in slowly. Holding the chain in the yellow/red drains it; thrashing drains
 // it too. Slacken and it breathes again (slower with Iron Grip, faster on
-// LEVIATHAN). A SPENT monster comes in fast and pulls weak.
+// KAGE). A SPENT monster comes in fast and pulls weak.
 export const staminaWord = (s) => (s > 70 ? 'FRESH' : s > 40 ? 'WINDING' : s > 15 ? 'TIRING' : 'SPENT');
 // The fight's floating callouts share one column over the monster: the
 // stamina word holds the bottom line, VITAL! and THRASHING! take the
@@ -176,10 +169,11 @@ export const staminaWord = (s) => (s > 70 ? 'FRESH' : s > 40 ? 'WINDING' : s > 1
 // (0 = not showing) so the three never print on top of each other.
 export function calloutLines(f) {
   const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
-  const lines = { vital: 0, thrash: 0 };
+  const lines = { vital: 0, thrash: 0, vanish: 0 };
   let n = 0;
   if (f.vitalFlash > 0 && f.wpT > 0) lines.vital = ++n;
   if (surge01 > 0.78) lines.thrash = ++n;
+  if (f.vanishFlash > 0) lines.vanish = ++n;
   return lines;
 }
 export const snapPoint = (run) => (hasBoon(run, 'cable') ? 106 : 100);
@@ -190,14 +184,30 @@ function stepFight(run, dt, input) {
   const gear = HARPOONS[run.harpoon];
   const diff = DIFFICULTIES[run.difficulty];
   f.t += dt;
+  // first-night coaching prompts burn down here (armed once, in abilities.js)
+  if (run.coachWpT > 0) run.coachWpT -= dt;
+  if (run.coachTeleT > 0) run.coachTeleT -= dt;
   const emit = (type, data = {}) => ev(run, type, data);
+  // the DASH: a ninja step (Shift / J), 0.28 s of untouchable, 1.2 s to
+  // recover. Timers run before the event clock so a step pressed on the
+  // very frame an impact lands still counts — see perfectDodge.
+  if (f.dashCd > 0) f.dashCd -= dt;
+  if (f.dashT > 0) f.dashT -= dt;
+  if (f.counterT > 0) f.counterT -= dt;
+  if (f.vanishFlash > 0) f.vanishFlash -= dt;
+  const dashKey = input.dash || (input.pressedKeys && (input.pressedKeys.has('ShiftLeft') || input.pressedKeys.has('ShiftRight') || input.pressedKeys.has('KeyJ')));
+  if (dashKey && f.dashCd <= 0 && f.dashT <= 0) {
+    f.dashT = 0.28;
+    f.dashCd = 1.2;
+    emit('dash', { mi: f.mi });
+  }
   const mods = stepFightEvents(run, f, dt, input, emit);
-  const held = input.hold && !mods.phaseSlack; // a phased cable cannot be worked
+  const held = input.hold && !mods.phaseSlack; // a phased chain cannot be worked
   const wp = stepWeakPoint(run, f, dt, { ...input, hold: held }, emit);
   const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
   const st = f.stamina / 100;
   const load = m.power * diff.power * (0.35 + 0.65 * Math.max(0, surge01)) * (0.85 + 0.3 * st);
-  // SURGE: spend a banked charge for 1.5 s of double reel on a hotter cable
+  // CHAIN SURGE: spend a banked charge for 1.5 s of double haul on a hotter chain
   if (f.surgeT > 0) f.surgeT -= dt;
   const surgeKey = input.surge || (input.pressedKeys && input.pressedKeys.has('KeyF'));
   if (surgeKey && !mods.phaseSlack && run.surgeCharges > 0 && f.surgeT <= 0) {
@@ -209,14 +219,15 @@ function stepFight(run, dt, input) {
     let dT = (load * 2.05 - gear.control * 1.55) * dt;
     if (f.surgeT > 0 && dT > 0) dT *= 1.5; // the surge climbs the tension faster
     f.tension += dT;
-    const reelRate = gear.reel * (hasBoon(run, 'winch') ? 1.25 : 1) * (f.surgeT > 0 ? 2 : 1);
-    f.dist -= reelRate * Math.max(0.35, 1.12 - f.tension / 160) * (0.68 + 0.32 * (1 - st)) * dt;
+    const haulRate = gear.haul * (hasBoon(run, 'winch') ? 1.25 : 1) * (f.surgeT > 0 ? 2 : 1);
+    f.dist -= haulRate * Math.max(0.35, 1.12 - f.tension / 160) * (0.68 + 0.32 * (1 - st)) * dt;
     if (wp.exposed && wp.fake) {
-      f.tension += 12 * dt; // hauling on a pale lie: no drain, and the cable pays
+      f.tension += 12 * dt; // hauling on a pale lie: no drain, and the chain pays
     } else if (mods.armor && !wp.exposed) {
       f.stamina += 24 * dt; // the shell drinks the pull — triple regen
     } else if (f.tension >= 50) {
-      f.stamina -= (8 + (f.tension - 50) * 0.28) * (wp.exposed ? 2.2 : 1) * dt;
+      // a worked weak point drains at 2.2x — 3x inside a counter window
+      f.stamina -= (8 + (f.tension - 50) * 0.28) * (wp.exposed ? (f.counterT > 0 ? 3.0 : 2.2) : 1) * dt;
     }
   } else {
     f.tension -= 46 * dt;

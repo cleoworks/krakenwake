@@ -21,11 +21,9 @@ export function createRun(seed) {
     ownedH: [true, false, false],
     ownedL: [true, false, false, false],
     seasOpen: [true, false, false],
-    bestiary: MONSTERS.map(() => ({ count: 0, bestKg: 0 })),
+    bestiary: MONSTERS.map(() => ({ count: 0 })),
     throws: 0,
     hauled: 0,
-    biggestKg: 0,
-    biggestName: '',
     phase: 'idle', // idle | charge | wait | fight
     charge: 0,
     chargeDir: 1,
@@ -44,6 +42,10 @@ export function createRun(seed) {
     charmReady: true, // Sailor's Charm re-arms every night
     surgeCharges: 0, // banked SURGE charges (max 2), spent with F
     surgeFill: 0, // next-charge progress: hauls 0.5, vital ticks 0.25
+    coachedWp: false, // first-night coaching: each prompt arms exactly once
+    coachedTele: false,
+    coachWpT: 0, // prompt timers, ticked down in stepFight
+    coachTeleT: 0,
   };
 }
 
@@ -58,25 +60,23 @@ export function gradeForScore(score) {
 export const journalCount = (run) => run.bestiary.reduce((n, b) => n + (b.count > 0 ? 1 : 0), 0);
 
 export function emptyBest() {
-  return { result: '', species: 0, biggestKg: 0, biggestName: '', combo: 0, coins: 0, score: 0, grade: '' };
+  return { result: '', species: 0, combo: 0, coins: 0, score: 0, grade: '' };
 }
 
 // The better of two finished runs, for the BEST line: species, then
-// score, then biggest haul, then combo, then coins.
+// score, then combo, then coins.
 export function betterBest(prev, run) {
   const mine = {
     result: run.result === 'victory' ? 'BESTIARY COMPLETE' : `${journalCount(run)}/13 species`,
     species: journalCount(run),
-    biggestKg: run.biggestKg,
-    biggestName: run.biggestName,
     combo: run.bestCombo,
     coins: run.coinsEarned,
     score: run.score,
     grade: gradeForScore(run.score),
   };
   if (!prev || !prev.result) return mine;
-  const a = [mine.species, mine.score, mine.biggestKg, mine.combo, mine.coins];
-  const b = [prev.species || 0, prev.score || 0, prev.biggestKg || 0, prev.combo || 0, prev.coins || 0];
+  const a = [mine.species, mine.score, mine.combo, mine.coins];
+  const b = [prev.species || 0, prev.score || 0, prev.combo || 0, prev.coins || 0];
   for (let i = 0; i < a.length; i++) {
     if (a[i] > b[i]) return mine;
     if (a[i] < b[i]) return prev;
@@ -85,7 +85,7 @@ export function betterBest(prev, run) {
 }
 
 export function nextGoal(best) {
-  if (!best || !best.result) return 'Next goal: complete the bestiary — kill the Mother Kraken';
-  if (best.species >= 13) return `Next goal: haul a Mother Kraken heavier than ${best.biggestKg.toFixed(1)} kg`;
+  if (!best || !best.result) return 'Next goal: complete the bestiary — kill the King Wyrm';
+  if (best.species >= 13) return `Next goal: beat your best score of ${best.score}`;
   return `Next goal: complete the bestiary (${best.species}/13 so far)`;
 }

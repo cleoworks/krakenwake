@@ -2,34 +2,23 @@
 // a busier sky, a third water texture, life under and on the surface, a
 // dressed dock, and the theatre around a fight. All placed from fixed
 // hashes plus the frame clock, so every screenshot agrees.
-import { staminaWord, calloutLines } from './fishing.js';
-import { MONSTERS } from './data.js';
-import { WATER_Y, lurePos } from './render.js';
+import { staminaWord, calloutLines } from '../fight.js';
+import { MONSTERS } from '../data.js';
+import { WATER_Y, lurePos, calloutX, MOON_X, MOON_Y } from '../render.js';
 
 const hash = (i, k) => ((i * 2654435761 + k * 40503) % 1000) / 1000;
 
 // --- the sky: a finer star field and two slow cloud bands ---
 export function drawSkyExtras(ctx, run, t) {
   ctx.fillStyle = '#dfeaf6';
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 8; i++) {
     const x = hash(i, 11) * 1280;
     const y = 8 + hash(i, 12) * 330;
-    if (Math.hypot(x - 1085, y - 92) < 78) continue;
+    if (Math.hypot(x - MOON_X, y - MOON_Y) < 78) continue;
     ctx.globalAlpha = 0.12 + 0.3 * Math.abs(Math.sin(t * 0.5 + i * 2.3));
     ctx.fillRect(x, y, 1.6, 1.6);
   }
   ctx.globalAlpha = 1;
-  // cloud bands: dark smudges sliding through the upper sky
-  ctx.fillStyle = 'rgba(10,18,32,0.44)';
-  for (let band = 0; band < 2; band++) {
-    const yBase = 58 + band * 92;
-    for (let i = 0; i < 2; i++) {
-      const x = ((hash(i + band * 7, 13) * 1500 + t * (5 + band * 3)) % 1560) - 140;
-      const y = yBase + hash(i + band * 7, 14) * 26;
-      ctx.beginPath();
-      ctx.ellipse(x, y, 96 + hash(i, 15) * 72, 11 + band * 4, 0, 0, 6.29); ctx.fill();
-    }
-  }
 }
 
 // --- the water: foam, sparkle, and everything living in it ---
@@ -38,7 +27,7 @@ function drawFoamAndSparkle(ctx, run, t) {
   ctx.strokeStyle = 'rgba(215,238,252,0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     const x = ((hash(i, 21) * 1340 - t * (9 + hash(i, 22) * 14)) % 1340 + 1340) % 1340 - 30;
     const y = WATER_Y + 18 + hash(i, 23) * 240;
     ctx.moveTo(x, y);
@@ -47,7 +36,7 @@ function drawFoamAndSparkle(ctx, run, t) {
   ctx.stroke();
   // the third texture layer: fine sparkle, denser and smaller than dressing's
   ctx.fillStyle = '#e8f4ff';
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 2; i++) {
     const x = hash(i, 25) * 1280;
     const y = WATER_Y + 10 + hash(i, 26) * 268;
     ctx.globalAlpha = 0.03 + 0.1 * Math.abs(Math.sin(t * 1.7 + i * 2.9));
@@ -60,8 +49,8 @@ function drawFoamAndSparkle(ctx, run, t) {
     const p = lurePos(run);
     ctx.strokeStyle = 'rgba(235,248,255,0.5)';
     ctx.lineWidth = 2;
-    for (let i = 0; i < 4; i++) {
-      const fx = p.x - 90 + i * 34 + Math.sin(t * 1.8 + i * 2.2) * 5;
+    for (let i = 0; i < 3; i++) {
+      const fx = p.x - 90 + i * 44 + Math.sin(t * 1.8 + i * 2.2) * 5;
       const fy = WATER_Y + 8 + (i % 3) * 7 + Math.sin(t * 2.3 + i) * 1.6;
       ctx.beginPath();
       ctx.arc(fx, fy, 8, 3.5, 5.9);
@@ -75,7 +64,7 @@ function drawSchool(ctx, t) {
   const gx = 700 + Math.sin(t * 0.11) * 190;
   const gy = 545 + Math.sin(t * 0.4) * 10;
   ctx.fillStyle = 'rgba(6,14,24,0.75)';
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 3; i++) {
     const fx = gx + (hash(i, 31) - 0.5) * 130;
     const fy = gy + (hash(i, 32) - 0.5) * 44 + Math.sin(t * 1.8 + i * 1.4) * 3;
     const s = 7 + hash(i, 33) * 4;
@@ -90,21 +79,17 @@ function drawSchool(ctx, t) {
 }
 
 function drawJellies(ctx, t) {
-  // two jellyfish keeping station in the Maw
-  for (const [jx, jy, s, ph] of [[420, 585, 21, 0], [585, 628, 15, 2.2]]) {
+  // one jellyfish keeping station in the Maw — flat shapes only (a
+  // glow disc costs real PNG bytes), the bell and falls drawn plain
+  for (const [jx, jy, s, ph] of [[420, 585, 21, 0]]) {
     const bob = Math.sin(t * 0.8 + ph) * 6;
-    const g = ctx.createRadialGradient(jx, jy + bob, 2, jx, jy + bob, s * 1.5);
-    g.addColorStop(0, 'rgba(150,120,255,0.28)');
-    g.addColorStop(1, 'rgba(150,120,255,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(jx - s * 1.5, jy + bob - s * 1.5, s * 3, s * 3);
     ctx.fillStyle = 'rgba(196,178,255,0.5)';
     ctx.beginPath();
     ctx.arc(jx, jy + bob, s, 3.14, 6.29);
     ctx.quadraticCurveTo(jx, jy + bob + s * 0.4, jx - s, jy + bob); ctx.fill();
     ctx.strokeStyle = 'rgba(196,178,255,0.4)';
     ctx.lineWidth = 2;
-    for (let k = -1; k <= 1; k++) {
+    for (const k of [-1, 1]) {
       ctx.beginPath();
       ctx.moveTo(jx + k * s * 0.5, jy + bob + 2);
       ctx.quadraticCurveTo(jx + k * s * 0.5 + Math.sin(t * 1.6 + ph + k) * 5, jy + bob + s * 1.1, jx + k * s * 0.4, jy + bob + s * 1.9);
@@ -116,7 +101,7 @@ function drawJellies(ctx, t) {
 function drawSeaweed(ctx, t) {
   ctx.strokeStyle = 'rgba(16,44,30,0.8)';
   ctx.lineCap = 'round';
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 2; i++) {
     const bx = 330 + i * 118 + hash(i, 41) * 40;
     const h = 44 + hash(i, 42) * 42;
     ctx.lineWidth = 5 - (i % 3);
@@ -192,22 +177,21 @@ export function drawDockDetail(ctx, run, t) {
   // a coiled rope by the hunter's boots
   ctx.strokeStyle = '#4a3820';
   ctx.lineWidth = 2.4;
-  for (const r of [9, 6, 3]) {
+  for (const r of [9, 5]) {
     ctx.beginPath();
     ctx.ellipse(232, 409, r + 3, r * 0.45, 0, 0, 6.29);
     ctx.stroke();
   }
   // the dock lantern: post, arm, warm flickering light; it swings when
-  // the Mother Kraken strains the dock, pooling light at its foot.
-  const swing = run.fight && MONSTERS[run.fight.mi].shape === 'kraken' ? Math.sin(t * 3.1) * 5 : 0;
+  // the King Wyrm strains the dock, pooling light at its foot.
+  const swing = run.fight && MONSTERS[run.fight.mi].shape === 'wyrm' ? Math.sin(t * 3.1) * 5 : 0;
+  // the lantern's pooled light on the water — flat ellipses, not a
+  // radial gradient: gradients are PNG-expensive and this is backdrop
   ctx.save();
   ctx.translate(128, WATER_Y + 14);
   ctx.scale(1, 0.22);
-  const pg = ctx.createRadialGradient(0, 0, 4, 0, 0, 105);
-  pg.addColorStop(0, 'rgba(255,180,90,0.13)');
-  pg.addColorStop(1, 'rgba(255,180,90,0)');
-  ctx.fillStyle = pg;
-  ctx.fillRect(-105, -105, 210, 210);
+  ctx.fillStyle = 'rgba(255,180,90,0.05)';
+  ctx.beginPath(); ctx.arc(0, 0, 58, 0, 6.29); ctx.fill();
   ctx.restore();
   ctx.save();
   ctx.translate(swing, 0);
@@ -215,11 +199,8 @@ export function drawDockDetail(ctx, run, t) {
   ctx.fillRect(48, 366, 5, 48);
   ctx.fillRect(48, 366, 20, 4);
   const fl = 0.82 + 0.18 * Math.sin(t * 9.3) * Math.sin(t * 3.7);
-  const lg = ctx.createRadialGradient(66, 380, 1, 66, 380, 30);
-  lg.addColorStop(0, `rgba(255,196,96,${0.55 * fl})`);
-  lg.addColorStop(1, 'rgba(255,196,96,0)');
-  ctx.fillStyle = lg;
-  ctx.fillRect(36, 350, 60, 60);
+  ctx.fillStyle = `rgba(255,196,96,${0.16 * fl})`;
+  ctx.beginPath(); ctx.arc(66, 380, 27, 0, 6.29); ctx.fill();
   ctx.fillStyle = '#0d0a06';
   ctx.fillRect(60, 371, 12, 15);
   ctx.fillStyle = '#ffcf6e';
@@ -243,30 +224,30 @@ export function drawFightFx(ctx, run, t) {
   if (run.phase !== 'fight' || !run.fight) return;
   const f = run.fight;
   const p = lurePos(run);
-  // reflection shimmer under a big monster, wider the heavier she is
-  const rw = 40 + Math.min(90, f.kg * 1.6);
+  // reflection shimmer under a big monster, wider the bulkier it is
+  const rw = 40 + Math.min(90, MONSTERS[f.mi].bulk * 5.3);
   ctx.fillStyle = 'rgba(200,228,250,0.20)';
-  for (let i = 0; i < 7; i++) {
-    const y = WATER_Y + 16 + i * 13;
+  for (let i = 0; i < 3; i++) {
+    const y = WATER_Y + 16 + i * 26;
     const w = rw * (0.5 + 0.5 * Math.abs(Math.sin(i * 1.9 + t * 1.4)));
     ctx.fillRect(p.x - w / 2 + Math.sin(i * 2.7 + t * 1.1) * 6, y, w, 2.4);
   }
   // thrash rings rolling off the monster
   ctx.strokeStyle = 'rgba(205,235,255,0.55)';
   ctx.lineWidth = 2;
-  for (let i = 0; i < 3; i++) {
-    const ph = (t * 0.85 + i / 3) % 1;
+  for (let i = 0; i < 2; i++) {
+    const ph = (t * 0.85 + i / 2) % 1;
     ctx.globalAlpha = (1 - ph) * 0.55;
     ctx.beginPath();
-    ctx.ellipse(p.x, WATER_Y + 7, 14 + ph * 74, (14 + ph * 74) * 0.3, 0, 0, 6.29);
+    ctx.ellipse(p.x, WATER_Y + 7, 14 + ph * 58, (14 + ph * 58) * 0.3, 0, 0, 6.29);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
-  // the splash crown where the cable bites the water
+  // the splash crown where the chain bites the water
   ctx.strokeStyle = 'rgba(230,246,255,0.8)';
   ctx.lineWidth = 2.2;
-  for (let i = 0; i < 5; i++) {
-    const a = -2.6 + i * 0.5;
+  for (let i = 0; i < 4; i++) {
+    const a = -2.6 + i * 0.62;
     const len = 9 + 6 * Math.abs(Math.sin(t * 7 + i * 1.9));
     ctx.beginPath();
     ctx.moveTo(p.x, WATER_Y + 3);
@@ -280,7 +261,7 @@ export function drawFightFx(ctx, run, t) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = wc;
-  ctx.fillText(word, p.x, WATER_Y - 64);
+  ctx.fillText(word, calloutX(run), WATER_Y - 64);
   // the surge, named when it comes — on its own line of the callout
   // column, clear of the word below and of VITAL! (see calloutLines)
   const lines = calloutLines(f);
@@ -289,7 +270,7 @@ export function drawFightFx(ctx, run, t) {
     ctx.globalAlpha = 0.75 + 0.25 * Math.sin(t * 10);
     ctx.font = "800 23px system-ui, 'Segoe UI', sans-serif";
     ctx.fillStyle = '#ff8a7a';
-    ctx.fillText('THRASHING!', p.x, WATER_Y - 64 - lines.thrash * 38);
+    ctx.fillText('THRASHING!', calloutX(run), WATER_Y - 64 - lines.thrash * 38);
     ctx.restore();
   }
 }

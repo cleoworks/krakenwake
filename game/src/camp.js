@@ -4,14 +4,14 @@
 import { MONSTERS, SEAS, HARPOONS, LURES, WEATHERS, poolFor, boonById } from './data.js';
 import { journalCount } from './state.js';
 import { text, panel, rr, drawRouteStrip } from './ui.js';
-import { drawFishShape } from './shapes.js';
+import { drawFishShape } from './vendor/shapes.js';
 import { drawBoonGlyph } from './glyphs.js';
 
 // one-line effects for the boon rows — full text lives on the draft cards
 const SHORT_FX = {
-  cable: 'wider safe band', winch: '+25% reel speed', chum: 'bites 20% faster',
+  cable: 'wider safe band', winch: '+25% haul speed', chum: 'bites 20% faster',
   aperture: '+50% strike window', charm: 'a snap keeps the combo', grip: 'stamina regens at half',
-  glow: 'rares answer more often', sails: 'weather penalties halved', sinkers: 'heavier specimens bite',
+  glow: 'rares answer more often', sails: 'weather penalties halved', sinkers: 'hauls pay +10%',
 };
 
 export function campLayout(run) {
@@ -93,15 +93,15 @@ export function drawCamp(ctx, run) {
     if (b.count > 0) {
       drawFishShape(ctx, m.shape, cx + 74, cy + 40, 30, m.color, '#0b1420');
       text(ctx, m.name, cx + 74, cy + 88, 16.5, '#eaf6ff', 'center');
-      text(ctx, `×${b.count} • best ${b.bestKg.toFixed(1)} kg`, cx + 74, cy + 108, 14.5, '#8fb8d4', 'center', 400);
+      text(ctx, `×${b.count} • sells for ${m.price} 🪙`, cx + 74, cy + 108, 14.5, '#8fb8d4', 'center', 400);
     } else {
       drawFishShape(ctx, m.shape, cx + 74, cy + 40, 30, '#131e2a', null);
       text(ctx, '???', cx + 74, cy + 88, 16.5, '#5f7d99', 'center');
-      text(ctx, SEAS[m.sea].name, cx + 74, cy + 108, 14.5, '#5f7d99', 'center', 400);
+      text(ctx, m.doom ? 'Doom Bell only' : SEAS[m.sea].name, cx + 74, cy + 108, 14.5, '#5f7d99', 'center', 400);
     }
   });
   const { rows, hunt } = campLayout(run);
-  text(ctx, 'HARPOONS — reel & tension', 852, 130, 19, '#aee6ff');
+  text(ctx, 'HARPOONS — haul speed & grip', 852, 130, 19, '#aee6ff');
   text(ctx, 'LURES — what bites, how fast', 852, 282, 19, '#aee6ff');
   text(ctx, 'SEAS — darker water, worse monsters', 852, 477, 19, '#aee6ff');
   for (const r of rows) {

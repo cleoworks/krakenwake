@@ -4,12 +4,13 @@
 // above the hunter's head, the right one hangs under the location chip.
 import { MONSTERS, SEAS, poolFor } from './data.js';
 import { text, panel } from './ui.js';
-import { drawFishShape } from './shapes.js';
-import { drawKraken } from './shapes2.js';
+import { drawFishShape } from './vendor/shapes.js';
+import { drawWyrmGlyph } from './vendor/wyrm.js';
 
 function monsterIcon(ctx, m, x, y, t) {
-  if (m.shape === 'kraken') drawKraken(ctx, x, y, 10, t);
+  if (m.shape === 'wyrm') drawWyrmGlyph(ctx, x, y, 10, m.color, '#0b1420');
   else drawFishShape(ctx, m.shape, x, y, 10, m.color, '#0b1420');
+  void t;
 }
 
 function drawLurking(ctx, run, view) {
@@ -68,7 +69,7 @@ function drawTonight(ctx, run) {
   latest.forEach((hh, r) => {
     const base = rowsTop + 13 + r * 19;
     text(ctx, MONSTERS[hh.mi].name, x + 10, base, 12.5, '#eaf6ff', 'left', 400);
-    text(ctx, `${hh.kg.toFixed(1)} kg • ${hh.coins} 🪙`, x + w - 10, base, 11.5, '#ffd94d', 'right', 400);
+    text(ctx, `${hh.coins} 🪙`, x + w - 10, base, 11.5, '#ffd94d', 'right', 400);
   });
   ctx.beginPath();
   ctx.moveTo(x + 10, afterRows + 7);

@@ -1,7 +1,8 @@
 // bot.js — one job: the policy that plays the loop. The title-screen attract
 // demo and the seeded proof in tools/bot-test.mjs both drive the game with
 // this. It plays like a decent hunter: full-ish casts, strikes on the bite,
-// pulse-reels a fresh monster to tire it out, then hauls hard once it fades.
+// pulse-hauls a fresh monster to tire it out, then hauls hard once it fades,
+// and dashes through telegraphs to open counter windows.
 import { MONSTERS, SEAS, poolFor } from './data.js';
 import { buyEquip, pickBoon } from './salvage.js';
 
@@ -23,9 +24,13 @@ export function makeBot() {
         const f = run.fight;
         const t = f.tension;
         const e = f.event;
-        // telegraphed lunges, slams and phases are answered by letting go
-        // before they land; a phased cable is slack water — reeling is wasted
+        if (f.dashT > 0) return { hold: true }; // mid-vanish: stay on the chain so the dodge lands
+        // telegraphed lunges, slams and phases: with the dash ready and
+        // the blow about to land, vanish through it still holding on —
+        // a perfect dodge opens the counter window. Otherwise let go
+        // before they land; a phased chain is slack water — hauling is wasted
         if (e && e.phase === 'tele' && (e.id === 'lunge' || e.id === 'slam' || e.id === 'phase')) {
+          if (f.dashCd <= 0 && e.t <= 0.24) return { hold: true, dash: true };
           releasing = true;
           return {};
         }
@@ -45,8 +50,9 @@ export function makeBot() {
         if (t > releaseAt) releasing = true;
         if (t < releaseAt - 26) releasing = false;
         const out = releasing ? {} : { hold: true };
-        // a real weak point is worth holding for, even past the pulse line
-        if (f.wpT > 0 && !f.wpFake && t < 92) out.hold = true;
+        // a real weak point is worth holding for, even past the pulse
+        // line — and a counter window doubly so
+        if (((f.wpT > 0 && !f.wpFake) || f.counterT > 0) && t < 92) out.hold = true;
         // spend a banked SURGE once the monster is fading and we are working it
         if (out.hold && run.surgeCharges > 0 && f.stamina < 40 && !(f.surgeT > 0)) out.surge = true;
         return out;
@@ -56,7 +62,7 @@ export function makeBot() {
   };
 }
 
-// The draft pick, by fixed priority: protect the combo and the cable first,
+// The draft pick, by fixed priority: protect the combo and the chain first,
 // then fight control, then speed and luck.
 const DRAFT_PRIORITY = ['charm', 'cable', 'grip', 'winch', 'aperture', 'chum', 'glow', 'sinkers', 'sails'];
 export function botDraft(run) {
@@ -68,7 +74,7 @@ export function botDraft(run) {
 }
 
 // Between casts: spend coins in a fixed priority and sail to the deepest open
-// sea that still hides an uncaught monster. The Mother Kraken only answers
+// sea that still hides an uncaught monster. The King Wyrm only answers
 // the Doom Bell, so the bell is bought and rung whenever the Maw is the hunt.
 export function botShop(run) {
   const uncaughtAt = (sea) => poolFor(sea).some((i) => run.bestiary[i].count === 0);

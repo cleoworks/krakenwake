@@ -1,13 +1,18 @@
 // shapes.js — one job: draw the monsters, creature-poster style. Angular
 // silhouettes, 3-step value shading, teeth, scars, speckle — nothing
 // round, nothing cute. This file holds the Shoal and Deep species; the
-// Maw set and the Mother Kraken live in shapes2.js.
-import { shade, makeKit } from './geom.js';
+// Maw set lives in shapes2.js and the King Wyrm in wyrm.js.
+import { shade, makeKit } from '../geom.js';
 import { drawDeepShape } from './shapes2.js';
+import { drawWyrmGlyph } from './wyrm.js';
 
 const DEEP = new Set(['shark', 'king', 'ghost', 'choir', 'turtle', 'squid']);
 
 export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
+  if (shape === 'wyrm') {
+    drawWyrmGlyph(ctx, x, y, s, color, eye);
+    return;
+  }
   if (DEEP.has(shape)) {
     drawDeepShape(ctx, shape, x, y, s, color, eye);
     return;
@@ -41,6 +46,8 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
       K.teeth(0.84, 0.03, 4, 0.13, 0.055); // needle teeth on the dropped jaw
       K.teeth(0.86, -0.11, 3, 0.1, 0.055);
       K.speckle(7, -0.7, 0.5, -0.12, 0.14);
+      K.gills(-0.25, 0.02, 4, 0.3); // body segmentation down the ribbon
+      K.scar(-0.55, -0.05, 0.3, 0.15);
       K.slitEye(0.8, -0.2, 0.1);
       break;
     }
@@ -72,6 +79,7 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
         }
       });
       K.speckle(6, -0.5, 0.5, -0.4, 0.1, 'rgba(226,214,190,0.5)'); // barnacles
+      K.speckle(5, -0.6, 0.6, 0.15, 0.4, 'rgba(8,10,14,0.45)'); // pitted plates
       // legs: three spiked struts a side, bent hard
       ctx.strokeStyle = shade(color, 0.8);
       ctx.lineWidth = s * 0.11;
@@ -135,6 +143,7 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
       ctx.fillStyle = shade(color, 0.75); // pectoral fin, spined
       K.ridge(0.05, 0.4, 0.42, 3, -0.3);
       K.gills(0.42, -0.05, 3, 0.4);
+      K.speckle(6, -0.5, 0.3, -0.25, 0.2, 'rgba(235,240,250,0.35)'); // scale sheen
       K.teeth(0.68, 0.14, 4, 0.12, 0.06);
       K.scar(-0.15, -0.05, 0.42, 0.25);
       K.slitEye(0.6, -0.12);
@@ -171,6 +180,7 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
         }
       });
       K.speckle(10, 0.1, 0.95, -0.5, -0.1, 'rgba(228,220,196,0.55)'); // barnacle crown
+      K.speckle(6, -0.7, 0.0, -0.3, 0.2, 'rgba(12,16,22,0.5)'); // rot patches aft
       K.scar(-0.3, 0.05, 0.55, -0.15); // an old harpoon wound
       K.teeth(0.68, 0.27, 5, 0.1, 0.055);
       K.slitEye(0.68, -0.08, 0.11);
@@ -215,6 +225,8 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
         ctx.fill();
       });
       K.speckle(8, -0.5, 0.4, -0.4, 0.2, 'rgba(10,14,20,0.5)');
+      K.speckle(5, -0.6, 0.3, -0.45, -0.1, 'rgba(235,228,205,0.5)'); // wart crust
+      K.scar(0.55, -0.3, 0.3, 0.4);
       K.slitEye(0.3, -0.34, 0.11);
       K.slitEye(0.62, -0.36, 0.11);
       break;
@@ -243,6 +255,8 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
       });
       ctx.fillStyle = shade(color, 0.8);
       K.ridge(-0.5, 0.3, -0.42, 5, 0.12);
+      K.speckle(6, -0.6, 0.4, -0.2, 0.25, 'rgba(216,255,208,0.35)'); // glow-motes in the weed
+      K.scar(-0.3, 0.1, 0.35, -0.3);
       K.teeth(0.7, 0.12, 4, 0.11, 0.055);
       K.slitEye(0.6, -0.1);
       break;

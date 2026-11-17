@@ -115,7 +115,7 @@ export function drawDressing(ctx, run, t) {
     }
     ctx.globalAlpha = 1;
   } else {
-    // Kraken's Maw: bone spires — the ribs of things she has eaten
+    // Wyrm's Maw: bone spires — the ribs of things he has eaten
     ctx.strokeStyle = 'rgba(216,208,188,0.5)';
     ctx.lineCap = 'round';
     for (const [bx, bh, lean] of [[520, 120, -30], [706, 84, 24], [1150, 140, -18]]) {
@@ -130,13 +130,13 @@ export function drawDressing(ctx, run, t) {
       ctx.quadraticCurveTo(bx + 16 + lean * 0.3, WATER_Y - bh * 0.45, bx + 14 + lean, WATER_Y - bh * 0.72);
       ctx.stroke();
     }
-    // a second tentacle, further off, doing its slow patrol
+    // a second coil, further off, doing its slow patrol
     const tx = 330 + Math.sin(t * 0.16) * 120;
     ctx.strokeStyle = 'rgba(5,8,14,0.65)';
     ctx.lineWidth = 11;
     ctx.beginPath();
-    ctx.moveTo(tx, 706);
-    ctx.quadraticCurveTo(tx - 20, 640, tx + 10, 592 + Math.sin(t * 0.8) * 7);
+    ctx.moveTo(tx - 26, 706);
+    ctx.quadraticCurveTo(tx, 622 + Math.sin(t * 0.8) * 7, tx + 28, 706);
     ctx.stroke();
   }
 }

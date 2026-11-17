@@ -60,7 +60,7 @@ export const sfx = {
   strike() { noise(0.14, 0.3, 1100); tone(190, 0.16, 'sawtooth', 0.18, 55); },
   splash() { noise(0.35, 0.22, 640); noise(0.22, 0.12, 1500, 0.04); },
   coin() { tone(1318, 0.07, 'square', 0.1); tone(1760, 0.12, 'square', 0.1, null, 0.06); },
-  thud(kg) { tone(95, 0.3, 'sine', Math.min(0.5, 0.15 + kg * 0.006), 38); },
+  thud(bulk) { tone(95, 0.3, 'sine', Math.min(0.5, 0.15 + bulk * 0.02), 38); },
   snap() { noise(0.2, 0.35, 2400); tone(320, 0.3, 'sawtooth', 0.16, 40); },
   escape() { tone(300, 0.25, 'sine', 0.1, 120); },
   click() { tone(740, 0.05, 'square', 0.07); },

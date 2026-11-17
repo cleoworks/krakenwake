@@ -25,4 +25,4 @@ const server = createServer(async (req, res) => {
     res.end('not found');
   }
 });
-server.listen(8377, () => console.log('KRAKENWAKE at http://127.0.0.1:8377'));
+server.listen(8377, () => console.log('WYRMWAKE at http://127.0.0.1:8377'));

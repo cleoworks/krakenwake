@@ -111,8 +111,8 @@ export function drawDraft(ctx, run, view) {
     text(ctx, `TAKE  [${i + 1}]`, c.x + c.w / 2, c.y + c.h - 27, 18, '#ffffff', 'center', 800);
   });
 
-  // tonight's recap: everything the ended night paid out, by name and weight
-  const shown = recap.slice(0, 5).map((hh) => `${MONSTERS[hh.mi].name} ${hh.kg.toFixed(1)} kg`).join('  •  ');
+  // tonight's recap: everything the ended night paid out, by name and price
+  const shown = recap.slice(0, 5).map((hh) => `${MONSTERS[hh.mi].name} ${hh.coins} 🪙`).join('  •  ');
   const extra = recap.length > 5 ? `  •  +${recap.length - 5} more` : '';
   text(ctx, recap.length ? `TONIGHT'S HAULS — ${shown}${extra}` : "TONIGHT'S HAULS — none; the sea kept its secrets", 640, 516, 14.5, '#aee6ff', 'center', 400);
 

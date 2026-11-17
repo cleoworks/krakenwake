@@ -1,27 +1,29 @@
 // theatre.js — one job: stage the fight. The telegraph banner, the weak
-// point and its VITAL callout, the kraken's wrap and slam tentacles, the
+// point and its VITAL callout, the wyrm's coil around the dock post, the
 // ink wash, a second monster mid-distance, and the harpoon's flight.
 import { MONSTERS } from './data.js';
 import { ABILITY_INFO } from './abilities.js';
-import { WATER_Y, lurePos, poleTip } from './render.js';
-import { drawFishShape } from './shapes.js';
-import { drawKraken } from './shapes2.js';
+import { WATER_Y, lurePos, calloutX } from './render.js';
+import { drawFishShape } from './vendor/shapes.js';
+import { drawWyrmGlyph, GOLD } from './vendor/wyrm.js';
 import { drawSeaTerrain } from './terrain.js';
-import { drawLimb } from './geom.js';
-import { calloutLines } from './fishing.js';
+import { calloutLines } from './fight.js';
 
 // the fighting monster's on-screen geometry, so the weak point lands true
 function monsterGeom(run) {
   const f = run.fight;
   const p = lurePos(run);
   const near = Math.max(0, 1 - f.dist / 95);
-  if (MONSTERS[f.mi].shape === 'kraken') return { x: p.x, y: WATER_Y + 6, s: 85 + near * 85, kraken: true };
-  return { x: p.x, y: WATER_Y - 4 - near * 12, s: 20 + near * 30 + Math.min(16, f.kg * 0.3), kraken: false };
+  if (MONSTERS[f.mi].shape === 'wyrm') return { x: p.x, y: WATER_Y + 6, s: 150 + near * 45, wyrm: true };
+  return { x: p.x, y: WATER_Y - 4 - near * 12, s: 20 + near * 30 + MONSTERS[f.mi].bulk, wyrm: false };
 }
 function weakPointPos(run) {
   const g = monsterGeom(run);
   const f = run.fight;
-  if (g.kraken) return { x: g.x + f.wpDx * g.s * 0.8, y: g.y - g.s * 0.55 + f.wpDy * g.s * 0.35 };
+  // the wyrm's weak point rides his throat, under the jaw on the neck's
+  // front edge — and it BURNS crimson-white: gold on gold would vanish,
+  // so the vital core is the one red thing on the golden king
+  if (g.wyrm) return { x: g.x - g.s * 0.30 + f.wpDx * g.s * 0.3, y: g.y - g.s * 1.38 + f.wpDy * g.s * 0.3 };
   return { x: g.x + f.wpDx * g.s * 1.3, y: g.y + f.wpDy * g.s };
 }
 
@@ -33,7 +35,7 @@ function drawSecondMonster(ctx, run, t) {
   if (sx < 400) return; // too close to the main event to read as another animal
   const shape = MONSTERS[(f.mi + 5) % 13].shape;
   const sy = WATER_Y - 2 + Math.sin(t * 1.7) * 2;
-  if (shape === 'kraken') drawKraken(ctx, sx, sy + 4, 15, t);
+  if (shape === 'wyrm') drawWyrmGlyph(ctx, sx, sy + 4, 15, '#0a1420', '#ff5040');
   else drawFishShape(ctx, shape, sx, sy, 15, '#0a1420', '#ff5040');
 }
 
@@ -41,7 +43,7 @@ function drawHarpoonTrail(ctx, run, t) {
   const w = run.wait;
   if (!w || w.t <= 0 || w.t >= 0.45) return;
   const q = w.t / 0.45;
-  const tip = poleTip(run);
+  const tip = { x: 208, y: 350 }; // the throwing hand, mid-hurl (ninja.js)
   const target = lurePos(run);
   const hx = tip.x + (target.x - tip.x) * q;
   const hy = tip.y + (target.y - tip.y) * q - Math.sin(q * 3.14) * 26;
@@ -82,47 +84,94 @@ function drawHarpoonTrail(ctx, run, t) {
   ctx.restore();
 }
 
-// --- the kraken, close: a wrap on the dock post, a slam rearing ---
-function drawKrakenTheatre(ctx, run, t) {
+// One stretch of the swimming body as a tapered ribbon along a smooth
+// curve — gold, banded with scales, moonlit on its top edge. Drawn in
+// humps with water between them, it reads as a back crossing the sea.
+function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1) {
+  const S = [];
+  const at = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = at(i - 1), p1 = pts[i], p2 = pts[i + 1], p3 = at(i + 2);
+    for (let j = 0; j < 7; j++) {
+      const u = j / 7, u2 = u * u, u3 = u2 * u;
+      S.push([0, 1].map((k) => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u
+        + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u2
+        + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u3)));
+    }
+  }
+  S.push([...pts[pts.length - 1]]);
+  const L = [], R = [];
+  for (let i = 0; i < S.length; i++) {
+    const a = S[Math.max(0, i - 1)], b = S[Math.min(S.length - 1, i + 1)];
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+    // the base taper runs flank to post; on top of it, a dive or rise
+    // end runs out to a fine point — no flat cap ever breaks the water
+    let w = w0 + (w1 - w0) * (i / (S.length - 1));
+    const u = i / (S.length - 1);
+    if (tipStart < 1) w *= tipStart + (1 - tipStart) * Math.min(1, u / 0.22);
+    if (tipEnd < 1) w *= tipEnd + (1 - tipEnd) * Math.min(1, (1 - u) / 0.22);
+    L.push([S[i][0] - dy * w, S[i][1] + dx * w]);
+    R.push([S[i][0] + dy * w, S[i][1] - dx * w]);
+  }
+  ctx.fillStyle = GOLD.water;
+  ctx.beginPath();
+  [...L, ...R.reverse()].forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]));
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(46,26,4,0.55)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  for (let i = 3; i < S.length - 3; i += 7) { // scale bands across the back
+    ctx.beginPath(); ctx.moveTo(L[i][0], L[i][1]); ctx.lineTo(R[i][0], R[i][1]); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,226,150,0.7)'; ctx.lineWidth = 2;
+  ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+}
+
+// a foam collar where the body breaks the surface — the honest sign
+// that the stretch between the humps runs submerged
+function foamCollar(ctx, x, y, r) {
+  ctx.strokeStyle = 'rgba(240,248,255,0.85)'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.32, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, y, r * 0.6, r * 0.2, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
+}
+
+// --- the wyrm, close: his body swims to the dock and coils its post ---
+function drawWyrmTheatre(ctx, run, t) {
   const f = run.fight;
-  if (MONSTERS[f.mi].shape !== 'kraken') return;
+  if (MONSTERS[f.mi].shape !== 'wyrm') return;
   const g = monsterGeom(run);
-  // one long tentacle has hold of the dock's end post: a tapered limb
-  // off her flank, suckers underneath, that coils the post and curls free
-  const sag = Math.sin(t * 1.1) * 4;
-  drawLimb(ctx, [
-    g.x - g.s * 0.72, WATER_Y + 2, (g.x + 262) / 2, WATER_Y - 30 + sag,
-    336, 374, 272, 400,
-  ], Math.max(8, g.s * 0.17), Math.max(5, g.s * 0.09), '#07090f', -1, 3);
+  // the body crosses in two humps — thick at his flank, finer toward
+  // the post — with a submerged stretch between: foam collars mark
+  // where it dives and where it rises again
+  const bob = Math.sin(t * 1.1) * 3, W = WATER_Y;
+  loopRibbon(ctx, [
+    [g.x - g.s * 0.70, W + 6], [g.x - g.s * 1.12, W - g.s * 0.13 + bob], [g.x - g.s * 1.52, W + 4],
+  ], g.s * 0.17, g.s * 0.10, 0.4, 0.05); // narrows into his flank; dives to a point at the collar
+  loopRibbon(ctx, [
+    [g.x - g.s * 1.94, W + 4], [g.x - g.s * 2.42, W - g.s * 0.07 + bob], [336, 398], [272, 394],
+  ], g.s * 0.09, g.s * 0.06, 0.05, 1); // rises from a point; the post
+  foamCollar(ctx, g.x - g.s * 1.52, W + 3, g.s * 0.16);
+  foamCollar(ctx, g.x - g.s * 1.94, W + 3, g.s * 0.14);
   ctx.lineCap = 'round';
-  for (let i = 0; i < 3; i++) { // the coil: full bands stepping down the post,
-    const cy = 397 + i * 12, rx = 13 - i, ry = 5 + i * 0.5; // each lit on top so it reads as a wrap
-    ctx.strokeStyle = '#07090f';
-    ctx.lineWidth = Math.max(5, g.s * 0.075);
+  for (let i = 0; i < 3; i++) { // the coil: thick bands stepping down the
+    const cy = 397 + i * 13, rx = 14 - i, ry = 5.5 + i * 0.5; // post, lit on top
+    ctx.strokeStyle = GOLD.water;
+    ctx.lineWidth = Math.max(6, g.s * 0.09);
     ctx.beginPath();
     ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, 0, 6.29);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(190,205,225,0.20)';
+    ctx.strokeStyle = 'rgba(243,226,179,0.4)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.ellipse(264 - i * 1.5, cy, rx, ry, 0, 3.4, 5.9);
     ctx.stroke();
-  }
-  // the slam, telegraphed: a tapered limb rears, its tip hooked to
-  // strike, taller as the landing nears
+  }  // the slam, telegraphed: the head itself rears (render.js) — here the
+  // water under it warns, a red ring widening as the strike nears
   if (f.event && f.event.id === 'slam' && f.event.phase === 'tele') {
     const q = 1 - Math.max(0, f.event.t) / 1.0;
-    const bx = g.x + g.s * 0.92;
-    const h = g.s * (0.7 + q * 1.5);
-    const wob = Math.sin(t * 6) * 3;
-    drawLimb(ctx, [
-      bx, WATER_Y + 4, bx + g.s * 0.30, WATER_Y - h * 0.55,
-      bx + g.s * 0.04, WATER_Y - h * 0.94, bx - g.s * 0.36 + wob, WATER_Y - h * 0.84,
-    ], Math.max(9, g.s * 0.21), Math.max(3, g.s * 0.055), '#07090f', -1, 3);
     ctx.strokeStyle = 'rgba(255,80,64,0.5)';
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.ellipse(bx, WATER_Y + 6, 20 + q * 16, 6 + q * 4, 0, 0, 6.29);
+    ctx.ellipse(g.x - g.s * 0.55, WATER_Y + 6, 20 + q * 18, 6 + q * 4, 0, 0, 6.29);
     ctx.stroke();
   }
 }
@@ -145,20 +194,27 @@ function drawWeakPoint(ctx, run, t) {
     ctx.fill();
     return;
   }
+  // in a counter window the point flares — the ring and core swell
+  // (the halo stays small: radial gradients are PNG-expensive)
+  const flare = f.counterT > 0 ? 1.7 : 1;
   const pulse = 1 + 0.16 * Math.sin(t * 14);
   const hg = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 30 * pulse);
-  hg.addColorStop(0, 'rgba(255,217,77,0.6)');
-  hg.addColorStop(1, 'rgba(255,217,77,0)');
+  hg.addColorStop(0, 'rgba(255,70,45,0.6)');
+  hg.addColorStop(1, 'rgba(255,70,45,0)');
   ctx.fillStyle = hg;
   ctx.fillRect(p.x - 32, p.y - 32, 64, 64);
-  ctx.strokeStyle = '#ffd94d';
+  ctx.strokeStyle = '#ff4a3c';
   ctx.lineWidth = 2.6;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, 10 * pulse, 0, 6.29);
+  ctx.arc(p.x, p.y, 10 * pulse * flare, 0, 6.29);
   ctx.stroke();
-  ctx.fillStyle = '#fff2b0';
+  ctx.fillStyle = '#ff2d1e';
   ctx.beginPath();
-  ctx.arc(p.x, p.y, 4, 0, 6.29);
+  ctx.arc(p.x, p.y, 6 * flare, 0, 6.29);
+  ctx.fill();
+  ctx.fillStyle = '#fff6ee';
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 3 * flare, 0, 6.29);
   ctx.fill();
 }
 
@@ -169,7 +225,7 @@ function drawVital(ctx, run, t) {
   const a = f.vitalFlash / 0.5;
   ctx.save();
   ctx.globalAlpha = a;
-  ctx.strokeStyle = '#ffd94d';
+  ctx.strokeStyle = '#ff5a48';
   ctx.lineWidth = 2.4;
   ctx.beginPath();
   ctx.arc(p.x, p.y, 14 + (1 - a) * 22, 0, 6.29);
@@ -179,10 +235,49 @@ function drawVital(ctx, run, t) {
   const lines = calloutLines(f);
   ctx.font = "800 22px system-ui, 'Segoe UI', sans-serif";
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#ffd94d';
-  ctx.fillText('VITAL!', lurePos(run).x, WATER_Y - 64 - Math.max(1, lines.vital) * 38);
+  ctx.fillStyle = '#ff6a55';
+  ctx.fillText('VITAL!', calloutX(run), WATER_Y - 64 - Math.max(1, lines.vital) * 38);
   ctx.restore();
   void t;
+}
+
+function drawVanish(ctx, run, t) {
+  const f = run.fight;
+  if (!(f.vanishFlash > 0)) return;
+  const lines = calloutLines(f);
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, f.vanishFlash / 0.35);
+  ctx.font = "800 24px system-ui, 'Segoe UI', sans-serif";
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#9fe8ff';
+  ctx.fillText('VANISH!', calloutX(run), WATER_Y - 64 - Math.max(1, lines.vanish) * 38);
+  ctx.restore();
+  void t;
+}
+
+// A monster hauled in close and SPENT gets the chain wrapped round its
+// body — dashed neon loops, visual only, the kusarigama finish.
+function drawChainWraps(ctx, run, t) {
+  const f = run.fight;
+  if (f.stamina > 15) return;
+  const g = monsterGeom(run);
+  const near = Math.max(0, 1 - f.dist / 95);
+  if (near < 0.7) return;
+  const cx = g.wyrm ? g.x - g.s * 0.02 : g.x;
+  const cy = g.wyrm ? g.y - g.s * 1.0 : g.y;
+  const rx = g.wyrm ? g.s * 0.30 : g.s * 0.95;
+  const ry = g.wyrm ? g.s * 0.55 : g.s * 0.42;
+  ctx.save();
+  ctx.strokeStyle = '#2effa8';
+  ctx.lineWidth = 2.4;
+  ctx.setLineDash([7, 5]);
+  ctx.lineDashOffset = -t * 22;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.ellipse(cx + i * rx * 0.22 - rx * 0.22, cy, rx * (1 - i * 0.13), ry * (1 - i * 0.1), g.wyrm ? 0.5 : 0, 0, 6.29);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawInk(ctx, run) {
@@ -220,7 +315,7 @@ function drawBanner(ctx, run, t) {
     ctx.font = "700 19px system-ui, 'Segoe UI', sans-serif";
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(199,125,255,0.9)';
-    ctx.fillText('THE CABLE HANGS SLACK — REELING DOES NOTHING', 640, 208);
+    ctx.fillText('THE CHAIN HANGS SLACK — HAULING DOES NOTHING', 640, 208);
   } else if (e.id === 'armor') {
     ctx.font = "700 19px system-ui, 'Segoe UI', sans-serif";
     ctx.textAlign = 'center';
@@ -229,18 +324,44 @@ function drawBanner(ctx, run, t) {
   }
 }
 
+// First-night coaching, drawn once per run: the first real weak point
+// names the strike; the first telegraph names its two answers. The
+// timers live on the run and burn down in stepFight — never repeated.
+function drawCoaching(ctx, run, t) {
+  const f = run.fight;
+  ctx.save();
+  ctx.textAlign = 'center';
+  if (run.coachWpT > 0 && f.wpT > 0 && !f.wpFake) {
+    const p = weakPointPos(run);
+    ctx.globalAlpha = Math.min(1, run.coachWpT);
+    ctx.font = "800 20px system-ui, 'Segoe UI', sans-serif";
+    ctx.fillStyle = '#9fe8ff';
+    ctx.fillText('STRIKE — SPACE!', p.x, p.y - 46 - Math.sin(t * 6) * 2);
+  }
+  if (run.coachTeleT > 0 && f.event && f.event.phase === 'tele') {
+    ctx.globalAlpha = Math.min(1, run.coachTeleT);
+    ctx.font = "800 20px system-ui, 'Segoe UI', sans-serif";
+    ctx.fillStyle = '#ffd94d';
+    ctx.fillText('ANSWER IT: LET GO to slacken — or DASH through it!  [Shift / J]', 640, 246);
+  }
+  ctx.restore();
+}
+
 export function drawTheatre(ctx, run, t) {
   drawSeaTerrain(ctx, run, t); // terrain first: everything fights on top of it
   if (run.phase === 'wait') drawHarpoonTrail(ctx, run, t);
   if (run.phase === 'fight' && run.fight) {
     drawSecondMonster(ctx, run, t);
-    drawKrakenTheatre(ctx, run, t);
+    drawWyrmTheatre(ctx, run, t);
+    drawChainWraps(ctx, run, t);
     drawWeakPoint(ctx, run, t);
   }
   drawInk(ctx, run); // the ink wash goes over the scene, under the banner
   if (run.phase === 'fight' && run.fight) {
     drawBanner(ctx, run, t);
     drawVital(ctx, run, t);
+    drawVanish(ctx, run, t);
+    drawCoaching(ctx, run, t);
   }
   // vignette cut for byte budget
 }

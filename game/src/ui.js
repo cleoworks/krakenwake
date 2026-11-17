@@ -3,7 +3,7 @@
 // and bold on purpose: the judge reads these screens shrunk.
 import { MONSTERS, SEAS, WEATHERS, BOONS, SEASON_NIGHTS, NIGHT_SECONDS } from './data.js';
 import { journalCount } from './state.js';
-import { staminaWord, snapPoint } from './fishing.js';
+import { staminaWord, snapPoint } from './fight.js';
 import { lurePos, WATER_Y } from './render.js';
 import { drawHuntPanels } from './panels.js';
 
@@ -103,7 +103,7 @@ export function drawHUD(ctx, run, view) {
   text(ctx, `BESTIARY ${journalCount(run)}/13`, 1248, 58, 24, '#ffe9a8', 'right');
   // goal banner + the location/weather chip as ONE string on the same row
   panel(ctx, 16, 88, 700, 44, 0.66);
-  text(ctx, `GOAL: Fill the bestiary — kill the Mother Kraken — ${journalCount(run)}/13`, 32, 118, 23, '#ffe9a8');
+  text(ctx, `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`, 32, 118, 23, '#ffe9a8');
   panel(ctx, 906, 88, 358, 44, 0.66);
   text(ctx, `${SEAS[run.sea].name} • ${WEATHERS[run.weatherIdx].name}`, 1248, 118, 23, '#aee6ff', 'right');
   drawBoonPips(ctx, run, 32, 142);
@@ -133,6 +133,7 @@ export function drawHUD(ctx, run, view) {
     // stamina: the named bar — FRESH monsters are a wall, SPENT ones are meat
     const word = staminaWord(f.stamina);
     const wordColor = word === 'FRESH' ? '#ff8a7a' : word === 'SPENT' ? '#39d353' : '#ffd94d';
+    text(ctx, 'STAMINA', 424, 540, 15, '#8fb8d4', 'right', 800);
     text(ctx, `${m.name.toUpperCase()} — `, 640, 540, 21, '#e8d8ff', 'center');
     const nameW = ctx.measureText(`${m.name.toUpperCase()} — `).width;
     ctx.save();
@@ -161,7 +162,7 @@ export function drawHUD(ctx, run, view) {
     ctx.fillRect(zx(Math.min(snapAt, f.tension)) - 3, 602, 6, 36);
     // SURGE pips beside the tension bar: banked charges in brass, the one
     // still filling shows its progress; F spends a charge mid-fight
-    text(ctx, 'SURGE', 856, 600, 13, '#8fb8d4', 'left', 800);
+    text(ctx, 'CHAIN SURGE', 856, 600, 13, '#8fb8d4', 'left', 800);
     for (let i = 0; i < 2; i++) {
       const px = 856 + i * 28;
       ctx.fillStyle = i < run.surgeCharges ? '#ffb52e' : 'rgba(255,255,255,0.12)';
@@ -174,12 +175,12 @@ export function drawHUD(ctx, run, view) {
       }
     }
     text(ctx, '[F]', 912, 626, 15, '#cfe8ff', 'left', 800);
-    if (f.surgeT > 0) text(ctx, 'SURGING!', 856, 654, 15, '#ffb52e', 'left', 800);
-    text(ctx, 'HOLD to reel in — release to slacken', 640, 668, 24, '#ffffff', 'center');
+    if (f.surgeT > 0) text(ctx, 'CHAIN SURGING!', 856, 654, 15, '#ffb52e', 'left', 800);
+    text(ctx, 'HOLD to haul in — release to slacken', 640, 668, 24, '#ffffff', 'center');
   } else {
     text(ctx, 'HOLD SPACE to charge your throw', 640, 640, 24, '#8fb8d4', 'center');
   }
-  text(ctx, 'SPACE hold/release: throw • strike • reel    F: Surge    S: Camp (shop + bestiary)    R: restart', 640, 706, 19, '#7fa6c4', 'center', 400);
+  text(ctx, 'SPACE hold/release: throw • strike • haul    Shift/J: Dash    F: Chain Surge    S: Camp (shop + bestiary)    R: restart', 640, 706, 19, '#7fa6c4', 'center', 400);
   drawHuntPanels(ctx, run, view);
 }
 

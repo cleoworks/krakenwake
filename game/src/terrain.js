@@ -11,7 +11,7 @@ export function drawSeaTerrain(ctx, run, t) {
   ctx.lineWidth = 2;
   for (let row = 0; row < 2; row++) {
     const y = WATER_Y + 36 + row * 58;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 4; i++) {
       const x = ((hash(i + row * 31, 51) * 1330 + t * (4 + row * 2)) % 1330) - 25;
       ctx.beginPath();
       ctx.arc(x, y + Math.sin(t * 1.2 + i * 1.8 + row) * 2, 9, 3.5, 5.9);
@@ -20,7 +20,7 @@ export function drawSeaTerrain(ctx, run, t) {
   }
   // the wreckage field: planks from somebody else's last night
   ctx.fillStyle = '#1c130c';
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     const x = 380 + hash(i, 52) * 760;
     const y = WATER_Y + 4 + hash(i, 53) * 8 + Math.sin(t * 1.25 + i * 2.4) * 2;
     ctx.save();
@@ -71,7 +71,7 @@ export function drawSeaTerrain(ctx, run, t) {
     // the Maw's whirlpool: three dashed rings turning against each other
     const cx = 990;
     const cy = WATER_Y + 132;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       ctx.strokeStyle = `rgba(255,120,95,${0.20 - i * 0.045})`;
       ctx.lineWidth = 2.4;
       ctx.setLineDash([12, 15]);
@@ -93,7 +93,7 @@ export function drawHorizonLife(ctx, run, t) {
   ctx.strokeStyle = 'rgba(8,14,24,0.85)';
   ctx.lineWidth = 2;
   ctx.lineCap = 'round';
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 4; i++) {
     const bx = fx + i * 27 + (i % 2) * 9;
     const by = 118 + (i % 3) * 13 + Math.sin(t * 1.3 + i * 1.7) * 3;
     const flap = Math.sin(t * 6.5 + i * 1.3) * 3.4;
@@ -125,7 +125,7 @@ export function drawHorizonLife(ctx, run, t) {
   }
   ctx.globalAlpha = 1;
   // fish jumping near the dock, one after another, all night long
-  for (let k = 0; k < 3; k++) {
+  for (let k = 0; k < 2; k++) {
     const p = (t * 0.45 + k * 0.37) % 1;
     if (p >= 0.45) continue;
     const q = p / 0.45;
@@ -156,8 +156,8 @@ export function drawHorizonLife(ctx, run, t) {
   ctx.fillStyle = 'rgba(255,238,190,0.05)';
   ctx.beginPath();
   ctx.moveTo(lampX, lampY);
-  ctx.lineTo(lampX + Math.cos(ba - 0.1) * 215, lampY + Math.sin(ba - 0.1) * 215);
-  ctx.lineTo(lampX + Math.cos(ba + 0.1) * 215, lampY + Math.sin(ba + 0.1) * 215);
+  ctx.lineTo(lampX + Math.cos(ba - 0.1) * 150, lampY + Math.sin(ba - 0.1) * 150);
+  ctx.lineTo(lampX + Math.cos(ba + 0.1) * 150, lampY + Math.sin(ba + 0.1) * 150);
   ctx.fill();
   ctx.fillStyle = '#060c16';
   ctx.beginPath();

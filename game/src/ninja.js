@@ -1,10 +1,10 @@
-// ninja.js — one job: draw the hunter as a character. The Kraken Ninja:
+// ninja.js — one job: draw the hunter as a character. The Wyrm Ninja:
 // black garb shaded by grey cloth folds, hood and mask with only the eye
 // slit open — red eyes in it — a white sash, black headband tails. He
 // ACTS: every phase has its pose, and his body reads the fight — tails
 // whip and the eyes' ember brightens as tension climbs. Render only.
 import { WEATHERS } from './data.js';
-import { crankKnob } from './tackle.js';
+import { leadHand } from './chain.js';
 
 const NX = 168; // the dock spot he has always stood on (render.js DOCK_X)
 const SHADOW = '#0a0a0d', BASE = '#17171c', CLOTH = '#232329', FOLD = '#3a3a44';
@@ -21,21 +21,22 @@ function dot(ctx, x, y, r, color) {
 }
 
 // Which pose the moment calls for: a staged view.pose (screenshots)
-// wins; then the telegraph flinch; then the fight's cable-motion read.
+// wins; then the telegraph flinch; then the fight's chain-motion read.
 function poseOf(run, view) {
   if (view.pose) return view.pose;
   const f = run.fight;
   if (run.phase === 'fight' && f) {
+    if (f.dashT > 0) return 'dash';
     if (f.event && f.event.phase === 'tele') return 'guard';
     const st = view._nj;
     if (st && st.f === f) {
-      if (f.dist < st.dist - 0.002) st.pose = 'reel';
+      if (f.dist < st.dist - 0.002) st.pose = 'haul';
       else if (f.dist > st.dist + 0.002) st.pose = 'slack';
       st.dist = f.dist;
       return st.pose;
     }
-    view._nj = { f, dist: f.dist, pose: 'reel' };
-    return 'reel';
+    view._nj = { f, dist: f.dist, pose: 'haul' };
+    return 'haul';
   }
   if (run.phase === 'charge') return 'charge';
   if (run.phase === 'wait') return run.wait && run.wait.t < 0.5 ? 'throw' : 'bitewait';
@@ -44,7 +45,7 @@ function poseOf(run, view) {
 }
 
 // The headband tails: two black ribbons off the knot, read by silhouette
-// and a rim of moonlight on their top edge. Calm cable — they drift;
+// and a rim of moonlight on their top edge. Calm chain — they drift;
 // tension (and gale, and surge) whips them round toward the water.
 function drawTails(ctx, hx, hy, t, fl, drag) {
   for (const [ph, lenMul] of [[0, 1], [2.1, 0.82]]) {
@@ -202,6 +203,13 @@ function drawTorso(ctx, hip, sho, lite) {
 export function drawNinja(ctx, run, view, lite = false) {
   const t = view.t;
   const pose = poseOf(run, view);
+  if (!lite && pose === 'dash') { // the vanish leaves afterimages behind
+    for (const [dx, a] of [[-30, 0.11], [-15, 0.22]]) {
+      ctx.save(); ctx.globalAlpha = a; ctx.translate(dx, 0);
+      drawNinja(ctx, run, view, true);
+      ctx.restore();
+    }
+  }
   const f = run.phase === 'fight' ? run.fight : null;
   const tension = f ? f.tension : 0;
   const gale = WEATHERS[run.weatherIdx].name === 'Gale';
@@ -220,11 +228,21 @@ export function drawNinja(ctx, run, view, lite = false) {
   if (pose === 'charge') {
     hip = P(-5, -50 - c * 2); sho = P(-1, -88 - c * 3); head = P(2, -104 - c * 2);
     ankB = P(-28, 0); kneeB = P(-36, -22); ankF = P(26, 0); kneeF = P(32, -21);
-    const sh = (s) => P(20 - 58 * s, -70 - (64 + 10 * c) * s);
-    handF = sh(0.8); handB = sh(0.6);
+    // the spear hand rides high on the raised shaft; the other hand is
+    // off it entirely, holding the rope's coils ready to pay out
+    handF = P(20 - 58 * 0.8, -70 - (64 + 10 * c) * 0.8);
+    handB = P(-8, -48);
     elbF = P(20 - 58 * 0.8 - 6, -70 - (64 + 10 * c) * 0.8 + 15);
-    elbB = P(20 - 58 * 0.6 - 10, -70 - (64 + 10 * c) * 0.6 + 11);
+    elbB = P(-18, -64);
     backShaft = false; raisedShaft = c;
+  } else if (pose === 'dash') {
+    // the vanish step: body low and long, driving off the back leg,
+    // arms scissored — speed before shape
+    hip = P(14, -46); sho = P(28, -80); head = P(40, -92);
+    ankB = P(-36, 0); kneeB = P(-14, -22); ankF = P(54, 0); kneeF = P(44, -26);
+    elbF = P(40, -64); handF = P(58, -50);
+    elbB = P(6, -58); handB = P(-10, -46);
+    backShaft = false;
   } else if (pose === 'throw') {
     hip = P(12, -50); sho = P(26, -88); head = P(38, -100);
     ankB = P(-34, 0); kneeB = P(-16, -24); ankF = P(40, 0); kneeF = P(40, -28);
@@ -236,16 +254,16 @@ export function drawNinja(ctx, run, view, lite = false) {
     elbF = P(16, -78); handF = P(12, -103);
     elbB = P(-8, -70); handB = P(26, -54);
     backShaft = false; seal = true;
-  } else if (pose === 'reel' || pose === 'slack') {
-    const reel = pose === 'reel';
-    hip = reel ? P(-8, -52) : P(8, -53);
-    sho = reel ? P(-18, -90) : P(13, -92);
-    head = reel ? P(-20, -106) : P(15, -108);
-    if (reel) { ankB = P(-32, 0); kneeB = P(-28, -26); ankF = P(46, 0); kneeF = P(34, -24); }
+  } else if (pose === 'haul' || pose === 'slack') {
+    const haul = pose === 'haul';
+    hip = haul ? P(-8, -52) : P(8, -53);
+    sho = haul ? P(-18, -90) : P(13, -92);
+    head = haul ? P(-20, -106) : P(15, -108);
+    if (haul) { ankB = P(-32, 0); kneeB = P(-28, -26); ankF = P(46, 0); kneeF = P(34, -24); }
     else { ankB = P(-20, 0); kneeB = P(-22, -26); ankF = P(36, 0); kneeF = P(32, -24); }
-    handF = reel ? P(36, -61) : P(50, -40);
-    handB = crankKnob(run, view);
-    elbF = reel ? P(14, -66) : P(28, -64);
+    handF = haul ? P(36, -61) : P(50, -40);
+    handB = leadHand(run, view); // hauling hand over hand — no crank
+    elbF = haul ? P(14, -66) : P(28, -64);
     elbB = { x: (sho.x + handB.x) / 2 - 3, y: (sho.y + handB.y) / 2 + 10 };
     backShaft = false;
   } else if (pose === 'guard') {
@@ -264,25 +282,25 @@ export function drawNinja(ctx, run, view, lite = false) {
   drawTails(ctx, head.x, head.y, t, pose === 'guard' ? fl * 0.4 : fl, pose === 'guard' ? 0 : drag);
   drawLeg(ctx, hip, kneeB, ankB, false, lite);
   drawLeg(ctx, hip, kneeF, ankF, true, lite);
-  if (backShaft) { // the harpoon rides across his back, head above the shoulder
+  if (backShaft) { // the harpoon rides across his back, head above the
+    // shoulder, a coil of spare rope slung at his hip
     seg(ctx, NX - 36, 414 - 60, NX + 34, 414 - 124, 4.6, SHAFT);
     drawHarpoonHead(ctx, NX + 34, 414 - 124, Math.atan2(-64, 70));
-    dot(ctx, NX - 33, 414 - 51, 5.2, '#101016'); // its reel, at the butt
-    dot(ctx, NX - 33, 414 - 51, 3, '#5a6a7a');
+    ctx.strokeStyle = '#0e2a30'; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.ellipse(NX - 22, 414 - 38, 7.5, 3.4, 0.3, 0, 6.29); ctx.stroke();
+    ctx.strokeStyle = 'rgba(110,230,255,0.5)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.ellipse(NX - 22, 414 - 38, 5.4, 2.3, 0.3, 0, 6.29); ctx.stroke();
   }
-  if (raisedShaft >= 0) { // coiled back over the shoulder, furniture and all
+  if (raisedShaft >= 0) { // the spear coiled back over the shoulder for
+    // the throw — a clean bare shaft; the rope coils ride
+    // in his low hand, ready to pay out behind the hurl
     const tipX = NX - 38, tipY = 414 - 134 - raisedShaft * 10;
     seg(ctx, NX + 20, 414 - 70, tipX, tipY, 4.6, SHAFT);
     drawHarpoonHead(ctx, tipX, tipY, Math.atan2(tipY - (414 - 70), tipX - (NX + 20)));
-    const gp = (s) => ({ x: NX + 20 - 58 * s, y: 414 - 70 - (64 + 10 * raisedShaft) * s });
-    const g1 = gp(0.55), g2 = gp(0.87);
-    seg(ctx, g1.x, g1.y, g2.x, g2.y, 7, '#0c0c10');
-    ctx.strokeStyle = '#8fa2b5'; ctx.lineWidth = 1.2;
-    for (const s of [0.36, 0.18]) {
-      const rp = gp(s);
-      ctx.beginPath(); ctx.arc(rp.x + 2, rp.y + 3, 2.3, 0, 6.29); ctx.stroke();
-    }    dot(ctx, NX + 24, 414 - 58, 5.6, '#101016');
-    dot(ctx, NX + 24, 414 - 58, 3.2, '#5a6a7a');
+    for (const [rx, ry, col, w] of [[8, 3.6, '#0e2a30', 2.8], [5.6, 2.4, 'rgba(110,230,255,0.55)', 1.3]]) {
+      ctx.strokeStyle = col; ctx.lineWidth = w;
+      ctx.beginPath(); ctx.ellipse(handB.x, handB.y + 2, rx, ry, 0.25, 0, 6.29); ctx.stroke();
+    }
   }
   if (plantedShaft) { // butt on the deck, head to the sky
     seg(ctx, NX + 38, 414, NX + 38, 414 - 112, 4.6, SHAFT);
