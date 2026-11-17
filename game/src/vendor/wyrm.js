@@ -3,8 +3,8 @@
 // bronze mane of dorsal spines, cream belly plates, one red eye. The
 // body follows ONE smooth curve (Catmull-Rom through the spine points):
 // ONE TALL LOOP rearing out of the water — steep flanks, so every
-// surface crossing is a near-vertical dive hidden by its splash crown,
-// never a shallow dome squatting on the surface — then a submerged
+// surface crossing is a near-vertical dive dissolved by its blend
+// zone, never a shallow dome squatting on the surface — then a submerged
 // valley, and the swan-arc neck bursting out to a long-snouted head
 // held high. Canvas vector, poster style. See shapes.js.
 import { shade, makeKit } from '../geom.js';
@@ -60,13 +60,13 @@ function ribbon(ctx, s, rear) {
   const S = smooth(ctrl);
   // no blunt caps on the king either: the tail runs out to a point in
   // the water, and the neck narrows into the skull that covers its end.
-  // Where a coil crosses the surface the body PINCHES — it slides
-  // under the water instead of sitting on it like a loaf.
+  // But at the surface itself the body keeps its FULL gauge — a body
+  // entering water does not thin (a hand does not taper); the blend
+  // zones at the crossings are what marry body to water.
   for (let i = 0; i < S.length; i++) {
     if (i < 8) S[i][2] *= 0.15 + 0.85 * (i / 8);
     const j = S.length - 1 - i;
     if (j < 6) S[i][2] *= 0.55 + 0.45 * (j / 6);
-    if (i < NECK * 8) S[i][2] *= 1 - 0.16 * Math.max(0, 1 - Math.abs(S[i][1]) / (0.085 * s));
   }
   const L = [], R = [];
   for (let i = 0; i < S.length; i++) {
@@ -86,7 +86,7 @@ function ribbon(ctx, s, rear) {
   // THE DIVE RULE: the body is clipped at the surface line — nothing
   // of the king shows below it, so no coil bottom, fin tip or belly
   // edge can end in a visible cut down in the water. Every stretch
-  // dives at the line and the foam collars (drawWyrm) mark the spots.
+  // dives at the line and the blend zones (drawWyrm) dissolve the spots.
   ctx.save();
   ctx.beginPath(); ctx.rect(-s * 1.2, -s * 2.6, s * 3.8, s * 2.6 + s * 0.035); ctx.clip();
   poly(ctx, [...L, ...R.reverse()], BASE);
@@ -110,7 +110,7 @@ function ribbon(ctx, s, rear) {
   let acc = 0;
   for (let si = 6; si < NECK * SUB - 2; si++) {
     acc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
-    if (acc >= s * 1.15) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
+    if (acc >= s * 1.5) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
   }
   // features ride the CONTROL points but take position and direction
   // from the smoothed curve (sample 8 per segment)
@@ -151,18 +151,51 @@ function ribbon(ctx, s, rear) {
   return ctrl;
 }
 
-// a splash CROWN where the body breaks the surface: a foam ring with
-// spikes thrown up around the crossing — the crown is what hides the
-// exact point where body meets water, so a steep dive never shows a cut
-function splash(ctx, x, y, r) {
-  ctx.strokeStyle = CREAM; ctx.globalAlpha = 0.85; ctx.lineWidth = Math.max(1.4, r * 0.08);
-  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.3, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+// a BLEND ZONE where the body breaks the surface — "penuh tapi nyatu
+// sama air": full thickness, dissolved into the water. Not a ring
+// sitting on the line: ripple rings spread on the surface, foam
+// spreads out and MOUNDS climb and hug the body's base, pale streaks
+// sheet UP the gold, droplets hang in the air above the foam — the
+// body's lowest stretch mixes with splash and surface foam until no
+// hard boundary survives and body and water read as one thing, the
+// way a painted serpent's base dissolves into its splash. r is the
+// body's half-thickness at the crossing, so the zone hugs the gauge.
+export function blendCrossing(ctx, x, y, r, t, ph = 0) {
+  const j = (k) => Math.sin(ph * 39.7 + k * 2.39) * 0.5; // per-crossing jitter
+  ctx.lineCap = 'round';
+  // one ripple ring, expanding and fading — only the near arc, kept
+  // short and faint: translucent ellipse edges are the PNG budget's
+  // worst enemy, so the ring whispers instead of drawing a target
+  const u = (t * 0.4 + ph) % 1;
+  ctx.strokeStyle = `rgba(220,238,250,${(0.2 * (1 - u)).toFixed(3)})`;
+  ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(x, y + 2, r * (1.2 + u * 0.7), r * (1.2 + u * 0.7) * 0.3, 0, Math.PI * 0.3, Math.PI * 0.7); ctx.stroke();
+  // the mound hugging the base, climbing the flanks — chunky, mostly
+  // opaque blobs side by side (overlapping translucency is what
+  // costs), jittered so it reads as churned water, not scoops; the
+  // wide flank blobs double as the foam spreading on the surface
+  for (const [dx, dy, w, a] of [[-0.85, -0.04, 0.64, 0.68], [0, -0.15, 0.74, 0.92], [0.87, -0.04, 0.62, 0.68]]) {
+    ctx.fillStyle = `rgba(244,250,255,${a})`;
+    ctx.beginPath(); ctx.ellipse(x + (dx + j(dx * 3) * 0.14) * r, y + dy * r, r * w, r * w * 0.46, 0, 0, 6.29); ctx.fill();
+  }
+  ctx.strokeStyle = CREAM; ctx.globalAlpha = 0.9; // the crown's spikes,
+  ctx.lineWidth = Math.max(1.4, r * 0.09); // thrown up through the mound
   for (let i = -1; i <= 1; i++) {
-    const h = 0.62 - 0.13 * Math.abs(i); // the middle spike flies highest
-    ctx.beginPath(); ctx.moveTo(x + i * r * 0.34, y - r * 0.08);
-    ctx.lineTo(x + i * r * 0.46, y - r * h); ctx.stroke();
+    const h = 0.74 - 0.14 * Math.abs(i); // the middle spike flies highest
+    ctx.beginPath(); ctx.moveTo(x + i * r * 0.36, y - r * 0.25);
+    ctx.lineTo(x + i * r * 0.5, y - r * h); ctx.stroke();
   }
   ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(235,246,255,0.6)'; // water sheeting UP the body:
+  ctx.lineWidth = Math.max(1.2, r * 0.07); // pale runs climbing the gold
+  for (const [dx, h] of [[-0.5, 0.9], [0.3, 1.05]]) {
+    ctx.beginPath(); ctx.moveTo(x + dx * r, y - r * 0.1);
+    ctx.quadraticCurveTo(x + dx * r * 1.15, y - r * h * 0.55, x + dx * r * 0.88, y - r * h); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(240,248,255,0.85)'; // droplets above the foam line
+  for (const [dx, dy, d] of [[-0.9, -0.7, 0.09], [0.1, -0.95, 0.075], [0.85, -0.6, 0.06]]) {
+    ctx.beginPath(); ctx.arc(x + dx * r, y + dy * r, Math.max(1, r * d), 0, 6.29); ctx.fill();
+  }
 }
 
 // The horned head in profile facing left: a longer snout than any fish
@@ -213,13 +246,15 @@ export function drawWyrm(ctx, x, y, s, t, color = '#ff5a4e', maw = 0, rear = 0) 
   const hs = s * 1.25; // the head out-sizes the neck — the profile is the poster
   const KH = makeKit(ctx, hs, BASE, color);
   head(ctx, hs, KH, hp[0] - hs * 0.10, hp[1] - hs * 0.10, maw, rear);
-  // a crown at EVERY surface crossing of the new pose: the tail's
+  // a blend zone at EVERY surface crossing of the pose — the tail's
   // dive, the loop's steep rise, the loop's steep dive, and the neck
-  // bursting out of the submerged valley
-  splash(ctx, ctrl[0][0], 2, s * 0.15); // the tail's own dive point
-  splash(ctx, ctrl[1][0], 2, s * 0.20); // the loop rears out here
-  splash(ctx, ctrl[7][0], 2, s * 0.21); // the loop dives back here
-  splash(ctx, (ctrl[8][0] + ctrl[9][0]) / 2, 2, s * 0.19); // the neck breaks out
+  // bursting out of the submerged valley — each sized to the body's
+  // half-thickness right there, so the full-gauge body dissolves
+  // into broken water instead of meeting it on a hard line
+  blendCrossing(ctx, ctrl[0][0], 2, s * 0.11, t, 0.1); // the tail's dive
+  blendCrossing(ctx, ctrl[1][0], 2, s * 0.13, t, 0.5); // the loop rears out
+  blendCrossing(ctx, ctrl[7][0], 2, s * 0.18, t, 0.85); // the loop dives back
+  blendCrossing(ctx, (ctrl[8][0] + ctrl[9][0]) / 2, 2, s * 0.17, t, 0.3); // the neck breaks out
   ctx.restore();
 }
 

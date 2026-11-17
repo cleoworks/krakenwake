@@ -232,10 +232,12 @@ export function drawFightFx(ctx, run, t) {
     const w = rw * (0.5 + 0.5 * Math.abs(Math.sin(i * 1.9 + t * 1.4)));
     ctx.fillRect(p.x - w / 2 + Math.sin(i * 2.7 + t * 1.1) * 6, y, w, 2.4);
   }
-  // thrash rings rolling off the monster
+  // thrash rings rolling off the monster — skipped for the King
+  // Wyrm: his crossings carry their own blend zones (vendor/wyrm.js),
+  // ripple included, so rings here would double the churn at his base
   ctx.strokeStyle = 'rgba(205,235,255,0.55)';
   ctx.lineWidth = 2;
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < (MONSTERS[f.mi].shape === 'wyrm' ? 0 : 2); i++) {
     const ph = (t * 0.85 + i / 2) % 1;
     ctx.globalAlpha = (1 - ph) * 0.55;
     ctx.beginPath();

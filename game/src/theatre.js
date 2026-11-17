@@ -5,7 +5,7 @@ import { MONSTERS } from './data.js';
 import { ABILITY_INFO } from './abilities.js';
 import { WATER_Y, lurePos, calloutX } from './render.js';
 import { drawFishShape } from './vendor/shapes.js';
-import { drawWyrmGlyph, GOLD } from './vendor/wyrm.js';
+import { drawWyrmGlyph, GOLD, blendCrossing } from './vendor/wyrm.js';
 import { drawSeaTerrain } from './terrain.js';
 import { calloutLines } from './fight.js';
 
@@ -105,8 +105,11 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1, tipLen = 0.22) {
     const a = S[Math.max(0, i - 1)], b = S[Math.min(S.length - 1, i + 1)];
     let dx = b[0] - a[0], dy = b[1] - a[1];
     const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
-    // the base taper runs flank to post; on top of it, a dive or rise
-    // end runs out to a fine point — no flat cap ever breaks the water
+    // the base taper runs flank to post; on top of it, an end may run
+    // out to a point — but only in its submerged lead (tipLen is kept
+    // short), so at the surface line itself the body is at FULL gauge:
+    // a body entering water does not thin, the blend zone does the
+    // marrying. (A long thinning snout was tried and rejected.)
     let w = w0 + (w1 - w0) * (i / (S.length - 1));
     const u = i / (S.length - 1);
     if (tipStart < 1) w *= tipStart + (1 - tipStart) * Math.min(1, u / tipLen);
@@ -124,7 +127,7 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1, tipLen = 0.22) {
   let acc = 0;
   for (let i = 2; i < S.length - 2; i++) {
     acc += Math.hypot(S[i][0] - S[i - 1][0], S[i][1] - S[i - 1][1]);
-    if (acc < 120) continue;
+    if (acc < 200) continue;
     acc = 0;
     const a = S[i - 1], b = S[i + 1];
     let dx = b[0] - a[0], dy = b[1] - a[1];
@@ -138,18 +141,6 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1, tipLen = 0.22) {
   ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
 }
 
-// a foam CROWN where the body breaks the surface — foam ring plus
-// spikes thrown up around the crossing, hiding the exact point where
-// body meets water: the honest sign the next stretch runs submerged
-function foamCollar(ctx, x, y, r) {
-  ctx.strokeStyle = 'rgba(240,248,255,0.85)'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.ellipse(x, y, r, r * 0.32, 0, Math.PI * 1.05, Math.PI * 1.95); ctx.stroke();
-  for (let i = -1; i <= 1; i++) {
-    ctx.beginPath(); ctx.moveTo(x + i * r * 0.3, y - r * 0.06);
-    ctx.lineTo(x + i * r * 0.42, y - r * (0.52 - 0.1 * Math.abs(i))); ctx.stroke();
-  }
-}
-
 // --- the wyrm, close: his body swims to the dock and coils its post ---
 function drawWyrmTheatre(ctx, run, t) {
   const f = run.fight;
@@ -157,25 +148,28 @@ function drawWyrmTheatre(ctx, run, t) {
   const g = monsterGeom(run);
   // the body crosses in ONE TALL ARC — steep flanks, a high crown —
   // then a submerged stretch, then a steep rise into the long run to
-  // the post: foam crowns mark every dive and rise, and no shallow
+  // the post: blend zones dissolve every dive and rise, and no shallow
   // dome ever squats on the surface (the blunt look, banned for good)
   const bob = Math.sin(t * 1.1) * 3, W = WATER_Y;
   loopRibbon(ctx, [
     [g.x - g.s * 0.52, W + 6], [g.x - g.s * 0.74, W - g.s * 0.30 + bob], [g.x - g.s * 1.02, W - g.s * 0.42 + bob],
     [g.x - g.s * 1.30, W - g.s * 0.28 + bob], [g.x - g.s * 1.50, W + 4],
-  ], g.s * 0.16, g.s * 0.11, 0.08, 0.05); // out of his flank to a point, a tall arc, a steep dive to a point
+  ], g.s * 0.16, g.s * 0.11, 0.08, 0.05, 0.04); // out of his flank, a tall
+  // arc, a steep dive — the end points live in the submerged lead
+  // only; at the line the body is full gauge, the blend does the rest
   loopRibbon(ctx, [
-    [g.x - g.s * 1.80, W + 14], [g.x - g.s * 1.93, W - g.s * 0.11 + bob], [g.x - g.s * 2.06, W - g.s * 0.21 + bob],
-    [g.x - g.s * 2.40, W - g.s * 0.15 + bob],
+    [g.x - g.s * 1.88, W + 16], [g.x - g.s * 2.04, W - g.s * 0.20 + bob], [g.x - g.s * 2.40, W - g.s * 0.15 + bob],
     [(g.x - g.s * 2.40 + 336) / 2, W - 6 + bob], // a shallow sag in the long
     [336, 398], [272, 394], // run to the post — a swimming back, not a slide
-  ], g.s * 0.09, g.s * 0.06, 0.04, 1, 0.30); // the front end TAPERS down a
-  // long snout — thinner and thinner toward the crossing — and slips
-  // under the surface as a rounded point, never a thick rounded stub
-  foamCollar(ctx, g.x - g.s * 0.52, W + 3, g.s * 0.15);
-  foamCollar(ctx, g.x - g.s * 1.50, W + 3, g.s * 0.16);
-  foamCollar(ctx, g.x - g.s * 1.86, W + 3, g.s * 0.20); // a crown scaled to
-  // swallow the front dive's crossing whole
+  ], g.s * 0.09, g.s * 0.06, 0.05, 1, 0.04); // rises STEEP out of the water
+  // at full gauge — no thinning snout (tried, rejected by the owner):
+  // the point runs out below the surface, the blend zone marries the
+  // crossing. Water breaks around the body; the body does not shrink.
+  blendCrossing(ctx, g.x - g.s * 0.52, W + 3, g.s * 0.17, t, 0.0);
+  blendCrossing(ctx, g.x - g.s * 1.50, W + 3, g.s * 0.12, t, 0.4);
+  blendCrossing(ctx, g.x - g.s * 1.90, W + 3, g.s * 0.10, t, 0.75);
+  blendCrossing(ctx, 264, W + 3, g.s * 0.09, t, 0.55); // the post's foot,
+  // where the lowest wrap meets the water — foam lapping the coil home
   ctx.lineCap = 'round';
   for (let i = 0; i < 3; i++) { // the coil: three wraps stepping down the
     const cy = 397 + i * 13, rx = 14 - i, ry = 5.5 + i * 0.5; // post — each
@@ -229,11 +223,11 @@ function drawWeakPoint(ctx, run, t) {
   // (the halo stays small: radial gradients are PNG-expensive)
   const flare = f.counterT > 0 ? 1.7 : 1;
   const pulse = 1 + 0.16 * Math.sin(t * 14);
-  const hg = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 30 * pulse);
+  const hg = ctx.createRadialGradient(p.x, p.y, 1, p.x, p.y, 21 * pulse);
   hg.addColorStop(0, 'rgba(255,70,45,0.6)');
   hg.addColorStop(1, 'rgba(255,70,45,0)');
   ctx.fillStyle = hg;
-  ctx.fillRect(p.x - 32, p.y - 32, 64, 64);
+  ctx.fillRect(p.x - 23, p.y - 23, 46, 46);
   ctx.strokeStyle = '#ff4a3c';
   ctx.lineWidth = 2.6;
   ctx.beginPath();

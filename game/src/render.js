@@ -49,7 +49,7 @@ function drawSky(ctx, run, t) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, WATER_Y);
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 18; i++) {
     const x = (i * 173.3) % 1280;
     const y = 12 + starY(i) * 300;
     if (Math.hypot(x - MOON_X, y - MOON_Y) < 84) continue;
@@ -106,7 +106,7 @@ function drawWater(ctx, run, t) {
   // even under a plain moon; its water remembers.
   const gx = MOON_X + Math.sin(t * 0.4) * 22;
   ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : run.sea === 2 ? 'rgba(232,90,70,0.13)' : 'rgba(200,225,245,0.16)';
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 5; i++) {
     if (Math.sin(i * 3.7 + t * 0.6) > 0.55) continue; // the path breaks, like real glint
     const y = WATER_Y + 12 + i * 22;
     const w = 14 + 26 * Math.abs(Math.sin(i * 1.7 + t * 0.9));
