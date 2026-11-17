@@ -319,15 +319,11 @@ function drawBanner(ctx, run, t) {
   const f = run.fight;
   if (!f || !f.event) return;
   const e = f.event;
-  // the banner heads the callout stack: raised into the open sky and
-  // shifted left of the stack's column, because the rearing head
-  // reaches further left than the neck suggests — measured on a
-  // banner-free frame, its gold stands at x≈711 (y≈198) with the
-  // snout's fangs at x≈695 below y≈205. Centred on calloutX the box
-  // would meet the face at any readable width, so it sits 50 left:
-  // right edge ≈668, a clear 20+ px of sky from the dragon at every
-  // row it spans. It may rest on the moon's edge (background),
-  // never on the dragon.
+  // the telegraph banner sits TOP-CENTRE in the open sky — the
+  // classic boss-warning spot. Frame-centre is the dragon's (the
+  // head's gold fills it), so the box centres at 523 in the one
+  // clear corridor, raised to y84 above the lengthened snout —
+  // pixel-verified gold-free and moon-free on the staged cover.
   const cx = calloutX(run) - 50;
   if (e.phase === 'tele') {
     const info = ABILITY_INFO[e.id];
@@ -335,17 +331,17 @@ function drawBanner(ctx, run, t) {
     const label = `⚠ ${info.word} — ${info.counter}`;
     ctx.font = "800 18px system-ui, 'Segoe UI', sans-serif";
     const w = ctx.measureText(label).width + 24;
-    const bx = Math.max(w / 2 + 8, Math.min(1272 - w / 2, cx));
+    const bx = Math.max(w / 2 + 8, Math.min(1272 - w / 2, 523));
     ctx.fillStyle = 'rgba(9,16,28,0.88)';
     ctx.beginPath();
-    ctx.roundRect(bx - w / 2, 140, w, 54, 12);
+    ctx.roundRect(bx - w / 2, 84, w, 54, 12);
     ctx.fill();
     ctx.strokeStyle = BANNER_COLORS[e.id];
     ctx.lineWidth = 2 + Math.sin(t * 12) * 0.7;
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, bx, 176);
+    ctx.fillText(label, bx, 120);
   } else if (e.id === 'phase') {
     ctx.font = "700 19px system-ui, 'Segoe UI', sans-serif";
     ctx.textAlign = 'center';

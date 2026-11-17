@@ -48,7 +48,9 @@ function drawLurking(ctx, run, view) {
 function drawTonight(ctx, run) {
   const w = 224;
   const x = 1264 - w;
-  const y = 140;
+  const y = 58; // tucked up under the location chip (its base is y50):
+  // an 8px gap instead of floating far below it — pixel-checked
+  // gold-free at this height, the rear arch passes well below
   const hauls = run.tonightHauls || [];
   const latest = hauls.slice(-5).reverse();
   const rowsTop = y + 27;

@@ -84,17 +84,22 @@ function drawBoonPips(ctx, run, x, y, withLabel = true) {
 
 export function drawHUD(ctx, run, view) {
   // ONE compact panel at the top-left corner holds the run's vitals —
-  // coin, combo, score, night, level, bestiary in a two-column grid.
+  // coin, combo, score, night, level, bestiary in a two-column grid,
+  // and the BOONS pips as a fourth row when any are held: then the
+  // panel stretches a row taller, tightens its spacing and rides 4px
+  // up, so its base (y136) still clears the Blood Moon (top y≈141).
   // The rest of the top edge is open sky but for the location chip;
   // the goal rides as a chip at the bottom-left, above the fight strip.
-  panel(ctx, 16, 14, 296, 102, 0.78);
-  text(ctx, `🪙 ${run.coins}`, 32, 48, 23, '#ffd94d');
+  const hasB = run.boons.length > 0;
+  const top = hasB ? 10 : 14, r1 = hasB ? 44 : 48, r2 = hasB ? 74 : 78, r3 = hasB ? 102 : 106;
+  panel(ctx, 16, top, 296, hasB ? 126 : 102, 0.78);
+  text(ctx, `🪙 ${run.coins}`, 32, r1, 23, '#ffd94d');
   const comboScale = view.comboPop > 0 ? 1 + 0.45 * view.comboPop : 1;
   ctx.save();
-  ctx.translate(180, 48);
+  ctx.translate(180, r1);
   ctx.scale(comboScale, comboScale);
-  ctx.translate(-180, -48);
-  text(ctx, `COMBO ×${run.combo}`, 180, 48, 17, run.combo >= 3 ? '#ffb52e' : '#cfe8ff');
+  ctx.translate(-180, -r1);
+  text(ctx, `COMBO ×${run.combo}`, 180, r1, 17, run.combo >= 3 ? '#ffb52e' : '#cfe8ff');
   ctx.restore();
   // one grid cell: small caps label, then the value beside it; returns
   // the x where the value's ink ends (the night cell hangs its timer
@@ -105,16 +110,16 @@ export function drawHUD(ctx, run, view) {
     text(ctx, value, vx, y, 19, color);
     return vx + ctx.measureText(value).width;
   };
-  cell(32, 78, 'SCORE', `${run.score}`, '#ffe9a8');
-  const nightEnd = cell(180, 78, 'NIGHT', `${run.night}/${SEASON_NIGHTS}`, '#ffffff');
+  cell(32, r2, 'SCORE', `${run.score}`, '#ffe9a8');
+  const nightEnd = cell(180, r2, 'NIGHT', `${run.night}/${SEASON_NIGHTS}`, '#ffffff');
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
-  rr(ctx, nightEnd + 7, 70, 30, 9, 4);
+  rr(ctx, nightEnd + 7, r2 - 8, 30, 9, 4);
   ctx.fill();
   ctx.fillStyle = '#7fd4ff';
-  rr(ctx, nightEnd + 7, 70, 30 * Math.max(0, 1 - run.nightT / NIGHT_SECONDS), 9, 4);
+  rr(ctx, nightEnd + 7, r2 - 8, 30 * Math.max(0, 1 - run.nightT / NIGHT_SECONDS), 9, 4);
   ctx.fill();
-  cell(32, 106, 'LEVEL', DIFFICULTIES[run.difficulty].name, '#ffd94d');
-  cell(180, 106, 'BESTIARY', `${journalCount(run)}/13`, '#ffe9a8');
+  cell(32, r3, 'LEVEL', DIFFICULTIES[run.difficulty].name, '#ffd94d');
+  cell(180, r3, 'BESTIARY', `${journalCount(run)}/13`, '#ffe9a8');
   const goalStr = `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`;
   ctx.font = F(20);
   panel(ctx, 16, 598, ctx.measureText(goalStr).width + 32, 36, 0.66);
@@ -123,7 +128,7 @@ export function drawHUD(ctx, run, view) {
   const locW = ctx.measureText(locStr).width + 32;
   panel(ctx, 1264 - locW, 14, locW, 36, 0.66);
   text(ctx, locStr, 1248, 38, 20, '#aee6ff', 'right');
-  drawBoonPips(ctx, run, 32, 126);
+  drawBoonPips(ctx, run, 32, 108); // the panel's fourth row (no-op when no boons are held)
 
   if (run.phase === 'charge') {
     text(ctx, 'RELEASE TO THROW!', 640, 586, 32, '#ffffff', 'center');

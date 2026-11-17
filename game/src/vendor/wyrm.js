@@ -76,6 +76,17 @@ function ribbon(ctx, s, rear) {
     L.push([S[i][0] - dy * S[i][2], S[i][1] + dx * S[i][2]]);
     R.push([S[i][0] + dy * S[i][2], S[i][1] - dx * S[i][2]]);
   }
+  // a point across the body's width at sample si: f=0 is the belly
+  // (L) edge, f=1 the crest (R) edge — the shading bands, the scale
+  // field and the belly plates are all laid out in these fractions
+  const crossAt = (si, f) => [L[si][0] + (R[si][0] - L[si][0]) * f, L[si][1] + (R[si][1] - L[si][1]) * f];
+  const band = (f0, f1) => {
+    const F = (g, si) => (typeof g === 'function' ? g(si) : g);
+    const pts = [];
+    for (let si = 0; si < S.length; si++) pts.push(crossAt(si, F(f0, si)));
+    for (let si = S.length - 1; si >= 0; si--) pts.push(crossAt(si, F(f1, si)));
+    return pts;
+  };
   const SUB = 8;
   const frameAt = (si) => {
     const a = S[Math.max(0, si - 1)], b = S[Math.min(S.length - 1, si + 1)];
@@ -89,7 +100,23 @@ function ribbon(ctx, s, rear) {
   // dives at the line and the blend zones (drawWyrm) dissolve the spots.
   ctx.save();
   ctx.beginPath(); ctx.rect(-s * 1.2, -s * 2.6, s * 3.8, s * 2.6 + s * 0.035); ctx.clip();
-  poly(ctx, [...L, ...R.reverse()], BASE);
+  // TWO-TONE SHADING across the width, stepped like poster paint:
+  // a soft CREAM belly down the front, the base gold through the
+  // middle, a brighter gold up the crest — the body reads with
+  // VOLUME, a round hide catching light, not a flat ribbon of one
+  // gold. The belly's outer edge FLOWS: full reach down the front,
+  // pulling in where the front rolls over the loop's crown — there
+  // the back is up, and wears scale instead of belly.
+  const bellyOut = S.map((p, si) => {
+    const f = frameAt(si);
+    return f.dx < -0.85 && Math.abs(f.dy) < 0.5 ? 0.03 : 0.44;
+  });
+  for (let k = 0; k < 3; k++) for (let si = 1; si < S.length - 1; si++)
+    bellyOut[si] = (bellyOut[si - 1] + bellyOut[si] * 2 + bellyOut[si + 1]) / 4;
+  const bellyF = (si) => bellyOut[si];
+  poly(ctx, band(0, bellyF), shade(CREAM, 0.92));
+  poly(ctx, band(bellyF, 0.74), BASE);
+  poly(ctx, band(0.74, 1), shade(BASE, 1.22));
   // pale-gold light along the top edge, amber shade along the belly edge
   ctx.strokeStyle = 'rgba(255,226,150,0.9)'; ctx.lineWidth = Math.max(1.6, s * 0.017);
   ctx.beginPath(); R.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
@@ -112,61 +139,104 @@ function ribbon(ctx, s, rear) {
     acc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
     if (acc >= s * 1.5) { acc = 0; if (S[si][1] < -s * 0.03) bandAt(si); }
   }
-  // scale scallops on the sunlit flank: short arcs bowed off the
-  // lit edge between the bands, twice as fine as the seams — the
-  // hide reads as plated scale where the light catches it, not as
-  // smooth ribbon. Only where the body rides above the surface.
-  ctx.strokeStyle = 'rgba(255,226,150,0.32)';
-  ctx.lineWidth = Math.max(1, s * 0.011);
-  let sacc = 0;
+  // THE SCALE FIELD: rows of overlapping scallops across the
+  // body's crest half, shingled toward the tail, staggered row to
+  // row — the concept's scale texture where the light rides; the
+  // front half wears the soft belly rows instead. Pale arcs on the
+  // lit gold, dark seams where the crest rolls into shadow. Only
+  // where the body rides above the surface.
+  ctx.lineWidth = Math.max(1, s * 0.008);
+  let racc = 0, row = 0;
   for (let si = 6; si < S.length - 4; si++) {
-    sacc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
-    if (sacc < s * 0.62) continue;
-    sacc = 0;
-    if (S[si][1] > -s * 0.05) continue;
+    racc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (racc < s * 0.26) continue;
+    racc = 0; row++;
+    if (S[si][1] > -s * 0.04) continue;
     const f = frameAt(si), th = S[si][2];
-    const ex = R[si][0], ey = R[si][1];
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.quadraticCurveTo(ex - f.dy * th * 0.52 + f.dx * th * 0.22, ey + f.dx * th * 0.52 + f.dy * th * 0.22,
-      ex - f.dy * th * 1.02, ey + f.dx * th * 1.02);
-    ctx.stroke();
+    for (const fr0 of [0.54, 0.76]) { // the crest half only: the front
+      // half wears the belly plates, and arcs under them are wasted ink.
+      // SOLID tones, no alpha — poster-crisp arcs, and far cheaper in
+      // the PNG than translucent blends over three band tones
+      const fr = fr0 + (row % 2) * 0.09;
+      if (fr > 0.97) continue;
+      const a = crossAt(si, fr - 0.115), b = crossAt(si, fr + 0.115);
+      ctx.strokeStyle = fr < 0.65 ? shade(BASE, 0.60) : shade(BASE, 1.48);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]);
+      ctx.quadraticCurveTo((a[0] + b[0]) / 2 - f.dx * th * 0.42, (a[1] + b[1]) / 2 - f.dy * th * 0.42, b[0], b[1]);
+      ctx.stroke();
+    }
   }
-  // features ride the CONTROL points but take position and direction
-  // from the smoothed curve (sample 8 per segment)
-  const frame = (ci) => {
-    const si = Math.min(S.length - 1, ci * SUB);
-    const f = frameAt(si);
-    return { p: S[si], l: L[si], dx: f.dx, dy: f.dy };
+  // BELLY SCALE ROWS: the front wears soft OVERLAPPING SCALE ROWS,
+  // not armor — scallop arcs laid over the cream belly, bowed
+  // toward the tail, staggered row to row, in a deeper cream so
+  // each row's lip reads as one scale overlapping the next. Only
+  // where the belly runs full — it pulls in over the crown, and
+  // there the crest's own scales take over.
+  ctx.strokeStyle = shade(CREAM, 0.60);
+  ctx.lineWidth = Math.max(1.2, s * 0.016);
+  ctx.lineCap = 'round';
+  let bacc = 0, brow = 0;
+  for (let si = 6; si < S.length - 4; si++) {
+    bacc += Math.hypot(S[si][0] - S[si - 1][0], S[si][1] - S[si - 1][1]);
+    if (bacc < s * 0.30) continue;
+    bacc = 0; brow++;
+    if (S[si][1] > -s * 0.05 || bellyOut[si] < 0.2) continue;
+    const f = frameAt(si), th = S[si][2];
+    for (const fr0 of [0.13, 0.30]) {
+      const fr = fr0 + (brow % 2) * 0.07;
+      const a = crossAt(si, fr - 0.10), b = crossAt(si, fr + 0.10);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]);
+      ctx.quadraticCurveTo((a[0] + b[0]) / 2 - f.dx * th * 0.40, (a[1] + b[1]) / 2 - f.dy * th * 0.40, b[0], b[1]);
+      ctx.stroke();
+    }
+  }
+  // DORSAL SPINES: tall bronze BLADES along the crest — on the coils
+  // at every control point now, and on the neck a dense mane of long
+  // blades leaning back along the curve, a shorter blade between
+  // each pair. A spine whose base sits at the surface or whose tip
+  // would end under it is never drawn: underwater fins were the
+  // blunt triangles.
+  const spineGeom = (si, len, lean, hw) => {
+    const f = frameAt(si), th = S[si][2];
+    const bx = S[si][0] + f.dy * th * 0.78, by = S[si][1] - f.dx * th * 0.78;
+    const tip = [bx + f.dy * len + f.dx * len * lean, by - f.dx * len + f.dy * len * lean];
+    if (by > -0.04 * s || tip[1] > 0.02 * s) return null;
+    return { f, bx, by, tip, hw };
   };
-  for (let ci = 1; ci < ctrl.length - 1; ci++) {
-    const f = frame(ci);
-    if (ci >= NECK || ci % 2 === 1) { // dorsal spines; on the neck they
-      // lengthen and lean back along the curve — a bronze mane. A spine
-      // whose base sits at the surface or whose tip would end under it
-      // is never drawn: underwater fins were the blunt triangles.
-      const big = (ci >= NECK ? 0.34 : 0.13) * s;
-      const lean = ci >= NECK ? -0.55 : 0.04;
-      const bx = f.p[0] + f.dy * ctrl[ci][2] * 0.78, by = f.p[1] - f.dx * ctrl[ci][2] * 0.78;
-      const tip = [bx + f.dy * big + f.dx * big * lean, by - f.dx * big + f.dy * big * lean];
-      if (by < -0.04 * s && tip[1] < 0.02 * s) {
-        const hw = s * 0.085; // a wide base, sunk deep — grown, not pasted
-        poly(ctx, [[bx - f.dx * hw, by - f.dy * hw], [bx + f.dx * hw, by + f.dy * hw], tip], shade(BRONZE, 0.72));
-        poly(ctx, [[bx - f.dx * hw * 0.55, by - f.dy * hw * 0.55], [bx + f.dx * hw * 0.55, by + f.dy * hw * 0.55],
-          [bx + (tip[0] - bx) * 0.62, by + (tip[1] - by) * 0.62]], ci % 2 ? BRONZE : shade(BRONZE, 0.85));
-      }
-    }
-    if (ci >= NECK) { // a belly plate: a cream band across the neck's
-      // front, laid along the curve, its lower edge shaded so each
-      // plate reads as overlapping the next — segmentation, not bricks
-      const g = 0.095 * s;
-      const m = [f.l[0] + (f.p[0] - f.l[0]) * 0.8, f.l[1] + (f.p[1] - f.l[1]) * 0.8];
-      poly(ctx, [f.l, m, [m[0] + f.dx * g, m[1] + f.dy * g],
-        [f.l[0] + f.dx * g, f.l[1] + f.dy * g]], 'rgba(243,226,179,0.9)');
-      ctx.strokeStyle = 'rgba(138,90,30,0.55)'; ctx.lineWidth = Math.max(1, s * 0.01);
-      ctx.beginPath(); ctx.moveTo(m[0], m[1]); ctx.lineTo(m[0] + f.dx * g, m[1] + f.dy * g); ctx.stroke();
-    }
+  const drawSpine = (g, tone, inner = true) => {
+    const { f, bx, by, tip, hw } = g; // a wide base, sunk deep — grown, not pasted
+    // a CURVED blade, not a rigid triangle: each side bows outward
+    // through a mid point before narrowing to the tip, the leading
+    // edge pushed a touch further forward — a fin's sweep
+    const blade = (k, wMul) => {
+      const mx = bx + (tip[0] - bx) * 0.55, my = by + (tip[1] - by) * 0.55;
+      const w = hw * wMul, ow = hw * wMul * 0.60;
+      return [[bx - f.dx * w, by - f.dy * w],
+        [mx - f.dx * ow + f.dy * w * 0.14, my - f.dy * ow - f.dx * w * 0.14],
+        [bx + (tip[0] - bx) * k, by + (tip[1] - by) * k],
+        [mx + f.dx * ow + f.dy * w * 0.14, my + f.dy * ow - f.dx * w * 0.14],
+        [bx + f.dx * w, by + f.dy * w]];
+    };
+    poly(ctx, blade(1, 1), shade(BRONZE, 0.72));
+    if (inner) poly(ctx, blade(0.62, 0.55), tone);
+  };
+  for (let ci = 1; ci < NECK; ci++) {
+    if (ci % 2 === 0) continue; // coil blades at every other point —
+    // the silhouette keeps its teeth, the rows keep their air; and a
+    // single tone apiece — the nested second tone is the neck's luxury
+    const g = spineGeom(ci * SUB, 0.21 * s, 0.04, s * 0.075);
+    if (g) drawSpine(g, BRONZE, false);
   }
+  const neckSpines = [];
+  for (let ci = NECK; ci < ctrl.length - 1; ci++) {
+    const a = spineGeom(ci * SUB, 0.46 * s, -0.55, s * 0.08);
+    if (a) neckSpines.push(a);
+  }
+  // (the neck frill is carried by the mane and the blade row
+  // themselves — the translucent membranes once webbed between the
+  // last blades were cut: heavy in PNG bytes, and the fin read
+  // survives on the blades alone)
+  neckSpines.forEach((g, i) => drawSpine(g, i % 2 ? shade(BRONZE, 0.85) : BRONZE));
   ctx.restore();
   return ctrl;
 }
@@ -232,7 +302,8 @@ function strand(ctx, s, p, w0, w1, fill) {
     const t = i / N, pt = P(t), a = P(Math.max(0, t - 0.04)), b = P(Math.min(1, t + 0.04));
     let dx = b[0] - a[0], dy = b[1] - a[1];
     const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
-    const w = (w0 + (w1 - w0) * t) / 2;
+    const w = (w0 + (w1 - w0) * Math.pow(t, 1.35)) / 2; // a CURVED taper:
+    // full through the root's reach, thinning fast only near the tip
     L.push([(pt[0] - dy * w) * s, (pt[1] + dx * w) * s]);
     R.push([(pt[0] + dy * w) * s, (pt[1] - dx * w) * s]);
   }
@@ -246,8 +317,8 @@ function strand(ctx, s, p, w0, w1, fill) {
 // (ox, oy) shifts the root; k scales the pair; fill shades it.
 function horns(ctx, s, ox, oy, k, fill) {
   const P = (pts) => pts.map((v, i) => (i % 2 ? oy + v * k : ox + v * k));
-  strand(ctx, s, P([0.06, -0.13, 0.13, -0.25, 0.26, -0.31, 0.41, -0.40]), 0.078 * k, 0.004, fill); // the great horn
-  strand(ctx, s, P([0.17, -0.095, 0.24, -0.16, 0.31, -0.20, 0.40, -0.265]), 0.046 * k, 0.004, fill); // the second blade
+  strand(ctx, s, P([0.06, -0.13, 0.18, -0.30, 0.40, -0.44, 0.70, -0.56]), 0.092 * k, 0.004, fill); // the great horn
+  strand(ctx, s, P([0.17, -0.095, 0.30, -0.20, 0.46, -0.28, 0.66, -0.40]), 0.056 * k, 0.004, fill); // the second blade
 }
 
 // The DRAGON head in profile facing left — not a snake's smooth wedge:
@@ -259,55 +330,109 @@ function horns(ctx, s, ox, oy, k, fill) {
 function head(ctx, s, K, hx, hy, maw, rear) {
   ctx.save(); ctx.translate(hx, hy); ctx.rotate(-0.06 - rear * 0.10);
   const M = (pts) => pts.map(p => [p[0] * s, p[1] * s]);
-  // the finned mane, layered membranes flaring behind the jaw — outer
-  // deep, inner lit, bronze rays running from the cheek anchor
-  poly(ctx, M([[0.10, -0.16], [0.26, -0.26], [0.42, -0.18], [0.47, 0.02], [0.40, 0.22], [0.24, 0.30], [0.13, 0.16]]), shade(AMBER, 0.92));
-  poly(ctx, M([[0.12, -0.10], [0.24, -0.16], [0.36, -0.09], [0.385, 0.05], [0.31, 0.19], [0.18, 0.20], [0.13, 0.06]]), BASE);
+  // the finned mane, layered membranes flaring behind the jaw — a
+  // FULLER mane, and an ORGANIC one: every spike is two quadratic
+  // sweeps bowing outward to its point, flowing back from the head
+  // and jaw like a fin in water — no rigid triangles, no straight
+  // rim. Outer deep, inner lit, bronze rays from the cheek anchor.
+  const mane = (spikes, start, c1, p1, c2, fill) => {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(start[0] * s, start[1] * s);
+    for (const [a, t, b, v] of spikes) {
+      ctx.quadraticCurveTo(a[0] * s, a[1] * s, t[0] * s, t[1] * s);
+      ctx.quadraticCurveTo(b[0] * s, b[1] * s, v[0] * s, v[1] * s);
+    }
+    ctx.quadraticCurveTo(c1[0] * s, c1[1] * s, p1[0] * s, p1[1] * s);
+    ctx.quadraticCurveTo(c2[0] * s, c2[1] * s, start[0] * s, start[1] * s);
+    ctx.closePath(); ctx.fill();
+  };
+  mane([[[0.09, -0.27], [0.17, -0.35], [0.235, -0.315], [0.26, -0.21]],
+    [[0.265, -0.335], [0.35, -0.39], [0.415, -0.335], [0.43, -0.21]],
+    [[0.445, -0.315], [0.53, -0.31], [0.575, -0.225], [0.56, -0.11]],
+    [[0.575, -0.045], [0.65, 0.03], [0.615, 0.095], [0.55, 0.11]],
+    [[0.565, 0.205], [0.61, 0.27], [0.55, 0.315], [0.48, 0.29]],
+    [[0.475, 0.385], [0.49, 0.43], [0.435, 0.405], [0.36, 0.34]],
+    [[0.345, 0.435], [0.31, 0.45], [0.265, 0.385], [0.20, 0.28]]],
+    [0.10, -0.13], [0.13, 0.16], [0.11, 0.02], [0.095, -0.06], shade(AMBER, 0.92));
+  mane([[[0.115, -0.20], [0.20, -0.25], [0.25, -0.225], [0.27, -0.14]],
+    [[0.275, -0.235], [0.35, -0.27], [0.395, -0.23], [0.40, -0.13]],
+    [[0.41, -0.20], [0.47, -0.19], [0.495, -0.13], [0.48, -0.05]],
+    [[0.49, 0.015], [0.54, 0.07], [0.505, 0.115], [0.45, 0.13]],
+    [[0.455, 0.185], [0.48, 0.235], [0.435, 0.255], [0.38, 0.225]],
+    [[0.375, 0.29], [0.375, 0.325], [0.33, 0.29], [0.27, 0.225]]],
+    [0.115, -0.075], [0.14, 0.10], [0.12, 0.01], [0.11, -0.03], BASE);
   ctx.strokeStyle = 'rgba(125,82,32,0.85)'; ctx.lineWidth = Math.max(1, s * 0.013);
-  for (const [rx, ry] of [[0.40, -0.17], [0.455, 0.02], [0.385, 0.205], [0.26, 0.285]]) {
-    ctx.beginPath(); ctx.moveTo(0.14 * s, 0.0); ctx.lineTo(rx * s, ry * s); ctx.stroke();
+  for (const [rx, ry] of [[0.34, -0.37], [0.52, -0.29], [0.63, 0.03], [0.59, 0.26], [0.47, 0.41], [0.30, 0.43]]) {
+    ctx.beginPath(); ctx.moveTo(0.15 * s, 0.01 * s); ctx.lineTo(rx * s, ry * s); ctx.stroke();
   }
   ctx.strokeStyle = 'rgba(255,226,150,0.75)';
-  ctx.beginPath(); ctx.moveTo(0.26 * s, -0.26 * s); ctx.lineTo(0.42 * s, -0.18 * s);
-  ctx.lineTo(0.47 * s, 0.02 * s); ctx.lineTo(0.40 * s, 0.22 * s); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0.17 * s, -0.35 * s);
+  ctx.quadraticCurveTo(0.26 * s, -0.21 * s, 0.35 * s, -0.39 * s);
+  ctx.quadraticCurveTo(0.43 * s, -0.21 * s, 0.53 * s, -0.31 * s);
+  ctx.quadraticCurveTo(0.56 * s, -0.11 * s, 0.65 * s, 0.03 * s);
+  ctx.quadraticCurveTo(0.55 * s, 0.11 * s, 0.61 * s, 0.27 * s);
+  ctx.quadraticCurveTo(0.48 * s, 0.29 * s, 0.49 * s, 0.43 * s); ctx.stroke();
   horns(ctx, s, -0.035, 0.01, 0.88, shade(BRONZE, 0.62)); // the far horns, darker, root hidden by the skull
-  poly(ctx, M([[0.20, -0.06], [0.04, -0.15], [-0.14, -0.175], [-0.32, -0.155], [-0.455, -0.12], [-0.515, -0.06], [-0.52, -0.005], [-0.475, 0.04], [-0.22, 0.062], [0.02, 0.068], [0.20, 0.04]]), AMBER);
-  // the skull, deep amber — a SQUARED muzzle: the front edge drops near-
-  // vertical instead of rounding away, and the rear runs long so the
-  // skull overlaps the neck top and the join blends
-  poly(ctx, M([[0.20, -0.06], [0.04, -0.15], [-0.14, -0.175], [-0.32, -0.155], [-0.455, -0.12], [-0.40, -0.075], [-0.18, -0.068], [0.02, -0.075]]), shade(BASE, 1.3));
-  // lit crown — its lower edge BOWS with the skull instead of cutting across
-  poly(ctx, M([[-0.345, -0.15], [-0.06, -0.175], [-0.035, -0.12], [-0.16, -0.10], [-0.315, -0.105]]), shade(BRONZE, 0.85));
-  // the BROW PLATE: a heavy bronze slab over the eye, lit along its top
-  ctx.strokeStyle = 'rgba(255,226,150,0.7)'; ctx.lineWidth = Math.max(1, s * 0.011);
-  ctx.beginPath(); ctx.moveTo(-0.345 * s, -0.15 * s); ctx.lineTo(-0.06 * s, -0.175 * s); ctx.stroke();
-  for (const [nx, ny, nr] of [[-0.475, -0.125, 0.030], [-0.422, -0.136, 0.023]]) { // nostril bumps on the muzzle tip
+  poly(ctx, M([[0.22, -0.048], [0.10, -0.115], [-0.02, -0.142], [-0.16, -0.158], [-0.30, -0.156], [-0.44, -0.140], [-0.56, -0.120], [-0.645, -0.098], [-0.685, -0.072], [-0.69, -0.038], [-0.672, -0.006], [-0.60, 0.016], [-0.48, 0.034], [-0.32, 0.048], [-0.14, 0.056], [0.04, 0.058], [0.22, 0.036]]), AMBER);
+  // the skull, deep amber — a LONG dragon snout drawn in CURVES:
+  // many points along gentle arcs, the top line flowing far
+  // forward and easing down to the tip, the underside curving
+  // back under it — no straight plate edges anywhere on the head.
+  // The rear runs long so the skull overlaps the neck top and the
+  // join blends
+  poly(ctx, M([[0.22, -0.048], [0.10, -0.115], [-0.02, -0.142], [-0.16, -0.158], [-0.30, -0.156], [-0.44, -0.140], [-0.56, -0.120], [-0.645, -0.098], [-0.66, -0.070], [-0.55, -0.057], [-0.38, -0.061], [-0.20, -0.064], [-0.02, -0.066], [0.10, -0.057]]), shade(BASE, 1.3));
+  // lit crown — a smooth crescent following the skull's curve
+  poly(ctx, M([[-0.50, -0.116], [-0.38, -0.138], [-0.22, -0.150], [-0.08, -0.148], [-0.055, -0.112], [-0.20, -0.102], [-0.36, -0.098], [-0.47, -0.092]]), shade(BRONZE, 0.85));
+  // NO armor plates on this head — the skull wears SCALE ARCS and
+  // soft shading like the rest of the animal: two staggered rows
+  // of scallops over the crown and cheek, and a curved brow shadow
+  // sweeping over the eye. Arcs and curves only; the plated, seamed
+  // facets read as a robot's shell, and this is a living dragon.
+  ctx.strokeStyle = shade(BASE, 0.60); ctx.lineWidth = Math.max(1, s * 0.010);
+  for (const [ax, ay, ar] of [[-0.46, -0.100, 0.046], [-0.355, -0.112, 0.049], [-0.25, -0.115, 0.049], [-0.145, -0.108, 0.045],
+    [-0.43, -0.058, 0.040], [-0.155, -0.048, 0.042], [-0.055, -0.036, 0.038]]) {
+    ctx.beginPath(); ctx.arc(ax * s, ay * s, ar * s, Math.PI * 0.18, Math.PI * 0.82); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(42,24,4,0.55)'; ctx.lineWidth = Math.max(1.2, s * 0.016);
+  ctx.beginPath(); ctx.arc(-0.28 * s, -0.058 * s, 0.082 * s, Math.PI * 1.12, Math.PI * 1.60); ctx.stroke(); // the brow's curved shadow
+  for (const [nx, ny, nr] of [[-0.645, -0.098, 0.028], [-0.598, -0.110, 0.021]]) { // nostril bumps on the long snout's tip
     ctx.fillStyle = shade(AMBER, 1.18);
     ctx.beginPath(); ctx.ellipse(nx * s, ny * s, nr * s, nr * s * 0.68, 0, 0, 6.29); ctx.fill();
     ctx.fillStyle = '#2a1804';
     ctx.beginPath(); ctx.ellipse((nx - 0.003) * s, (ny - 0.008) * s, nr * s * 0.3, nr * s * 0.22, 0, 0, 6.29); ctx.fill();
   }
-  K.slitEye(-0.205, -0.052, 0.088); // the red eye, glaring out from under the brow
+  // (no nostril smoke: with the snout lengthened, the head reaches
+  // under the centred slam banner — a rising wisp would cross it)
+  K.slitEye(-0.28, -0.048, 0.10); // the red eye, slit-pupilled, set back under the brow plate's overhang
   ctx.strokeStyle = '#2a1804'; ctx.lineWidth = Math.max(1.2, s * 0.02);
-  ctx.beginPath(); ctx.moveTo(-0.345 * s, -0.112 * s); ctx.lineTo(-0.27 * s, -0.058 * s); ctx.stroke(); // the glare slash
+  ctx.beginPath(); ctx.moveTo(-0.42 * s, -0.098 * s); ctx.quadraticCurveTo(-0.36 * s, -0.082 * s, -0.335 * s, -0.05 * s); ctx.stroke(); // the glare, curved
   ctx.lineWidth = Math.max(1, s * 0.013); ctx.globalAlpha = 0.85;
-  ctx.beginPath(); ctx.moveTo(-0.505 * s, 0.018 * s); ctx.lineTo(-0.06 * s, 0.05 * s); ctx.stroke(); // the mouth line
+  ctx.beginPath(); ctx.moveTo(-0.665 * s, 0.002 * s); ctx.quadraticCurveTo(-0.36 * s, 0.030 * s, -0.05 * s, 0.048 * s); ctx.stroke(); // the mouth line, a gentle curve
   ctx.globalAlpha = 1;
   horns(ctx, s, 0, 0, 1, BRONZE); // the near horns, full bronze
-  // whisker barbels: two long strands streaming BACK from the snout —
-  // one arcing high over the brow, one flowing under the jaw
-  strand(ctx, s, [-0.505, -0.07, -0.36, -0.27, -0.02, -0.385, 0.27, -0.345], 0.02, 0.0025, shade(CREAM, 1.06));
-  strand(ctx, s, [-0.475, 0.035, -0.33, 0.15, 0.0, 0.205, 0.32, 0.125], 0.018, 0.0025, shade(CREAM, 1.06));
-  K.teeth(-0.495, 0.03, 2, 0.115, 0.042); // two long front fangs…
-  K.teeth(-0.40, 0.036, 4, 0.052, 0.046); // …and the fang row behind them
-  K.teeth(-0.20, 0.04, 3, 0.04, 0.042);
+  // whisker barbels: two LONG strands from the snout — one arcing
+  // high over the brow, one DROOPING from the snout and flowing
+  // back under the jaw, both reaching well past the cheek like the
+  // concept's whiskers
+  strand(ctx, s, [-0.665, -0.05, -0.42, -0.30, 0.02, -0.44, 0.46, -0.35], 0.024, 0.0025, shade(CREAM, 1.06));
+  strand(ctx, s, [-0.64, 0.018, -0.44, 0.115, -0.02, 0.205, 0.50, 0.125], 0.022, 0.0025, shade(CREAM, 1.06));
+  K.teeth(-0.66, 0.014, 2, 0.15, 0.042); // two long front fangs…
+  K.teeth(-0.565, 0.02, 4, 0.070, 0.046); // …and the fang row behind them
+  K.teeth(-0.36, 0.026, 3, 0.054, 0.042);
   ctx.save(); ctx.translate(0.10 * s, 0.05 * s); ctx.rotate(maw * 0.55); // the jaw
-  poly(ctx, M([[0.02, -0.005], [-0.28, 0.008], [-0.45, 0.022], [-0.525, 0.05], [-0.50, 0.088], [-0.30, 0.105], [0.02, 0.078]]), shade(AMBER, 1.25));
-  // an angular jaw with a squared chin corner, not a smooth scoop
-  K.teeth(-0.52, 0.045, 1, -0.062, 0.038); // lower fang, pointing up at the chin
-  K.teeth(-0.44, 0.04, 2, -0.038, 0.04); // and two smaller teeth behind it
-  strand(ctx, s, [-0.50, 0.075, -0.52, 0.13, -0.48, 0.165, -0.42, 0.185], 0.015, 0.002, shade(CREAM, 1.05)); // the chin beard
-  strand(ctx, s, [-0.435, 0.082, -0.44, 0.13, -0.40, 0.155, -0.345, 0.17], 0.012, 0.002, shade(CREAM, 1.05));
+  // a distinct LOWER JAW, long as the snout it answers: an angular
+  // blade with a squared chin corner, riding a touch behind the
+  // upper jaw's tip so the overhang reads — and it hangs slightly
+  // open on its hinge, its own fang row pointing up to meet the
+  // upper row
+  poly(ctx, M([[0.02, -0.005], [-0.25, 0.0], [-0.48, 0.005], [-0.65, 0.010], [-0.71, 0.026], [-0.73, 0.045], [-0.70, 0.066], [-0.62, 0.080], [-0.45, 0.092], [-0.25, 0.090], [-0.08, 0.076], [0.02, 0.058]]), shade(AMBER, 1.25));
+  K.teeth(-0.70, 0.03, 1, -0.085, 0.038); // lower fang, pointing up at the chin
+  K.teeth(-0.60, 0.028, 2, -0.050, 0.04); // and the lower row behind it
+  K.teeth(-0.46, 0.026, 2, -0.042, 0.04);
+  strand(ctx, s, [-0.70, 0.055, -0.715, 0.115, -0.665, 0.175, -0.585, 0.225], 0.016, 0.002, shade(CREAM, 1.05)); // the chin beard,
+  strand(ctx, s, [-0.625, 0.062, -0.63, 0.12, -0.585, 0.175, -0.51, 0.215], 0.013, 0.002, shade(CREAM, 1.05)); // three strands
+  strand(ctx, s, [-0.555, 0.066, -0.55, 0.115, -0.505, 0.16, -0.435, 0.20], 0.011, 0.002, shade(CREAM, 1.05)); // under the new chin
   ctx.restore(); ctx.restore();
 }
 
@@ -318,18 +443,31 @@ function head(ctx, s, K, hx, hy, maw, rear) {
 export function drawWyrm(ctx, x, y, s, t, color = '#ff5a4e', maw = 0, rear = 0) {
   ctx.save(); ctx.translate(x, y);
   const ctrl = ribbon(ctx, s, rear);
-  // a small tail fin breaks the surface where the body runs out —
-  // the far end of the king, swept back like his horns, in his gold.
-  // A crescent, not a wedge: its base dives INTO the ribbon's top
-  // edge, so no straight join line shows where fin meets body.
+  // the TAIL FLUKE breaks the surface where the body runs out — the
+  // concept's great fan tail: five lobes fanned up off a base that
+  // dives INTO the ribbon's end, webbing scalloped between the rays,
+  // a smaller fan laid inside for depth, bronze rays over the gold.
   const fx = ctrl[0][0];
-  ctx.fillStyle = shade(BASE, 1.15);
-  ctx.beginPath();
-  ctx.moveTo(fx - s * 0.13, s * 0.015);
-  ctx.quadraticCurveTo(fx - s * 0.02, -s * 0.10, fx + s * 0.10, -s * 0.155);
-  ctx.quadraticCurveTo(fx + s * 0.16, -s * 0.10, fx + s * 0.145, s * 0.015);
-  ctx.quadraticCurveTo(fx, -s * 0.035, fx - s * 0.13, s * 0.015);
-  ctx.closePath(); ctx.fill();
+  const fanTips = [[-0.34, -0.26], [-0.18, -0.37], [0.0, -0.42], [0.18, -0.36], [0.34, -0.24]];
+  const fan = (k, fill) => {
+    const bx = fx, by = s * 0.03;
+    const tip = ([tx, ty]) => [bx + tx * s * k, by + ty * s * k];
+    const pts = [[bx - s * 0.10 * k, by]];
+    fanTips.forEach((t, i) => {
+      if (i) { const p = fanTips[i - 1], m = tip([(p[0] + t[0]) / 2, (p[1] + t[1]) / 2 + 0.13]); pts.push(m); }
+      pts.push(tip(t));
+    });
+    pts.push([bx + s * 0.10 * k, by]);
+    poly(ctx, pts, fill);
+    return tip;
+  };
+  const tipAt = fan(1, shade(BASE, 1.12));
+  fan(0.68, BASE);
+  ctx.strokeStyle = 'rgba(138,90,30,0.5)'; ctx.lineWidth = Math.max(1, s * 0.011);
+  for (const t of fanTips) {
+    const [tx, ty] = tipAt(t);
+    ctx.beginPath(); ctx.moveTo(fx, s * 0.03); ctx.lineTo(tx, ty); ctx.stroke();
+  }
   const hp = ctrl[ctrl.length - 1];
   const hs = s * 1.25; // the head out-sizes the neck — the profile is the poster
   const KH = makeKit(ctx, hs, BASE, color);
