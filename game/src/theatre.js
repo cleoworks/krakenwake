@@ -87,7 +87,7 @@ function drawHarpoonTrail(ctx, run, t) {
 // One stretch of the swimming body as a tapered ribbon along a smooth
 // curve — gold, banded with scales, moonlit on its top edge. Drawn in
 // humps with water between them, it reads as a back crossing the sea.
-function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1) {
+function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1, tipLen = 0.22) {
   const S = [];
   const at = (i) => pts[Math.max(0, Math.min(pts.length - 1, i))];
   for (let i = 0; i < pts.length - 1; i++) {
@@ -109,8 +109,8 @@ function loopRibbon(ctx, pts, w0, w1, tipStart = 1, tipEnd = 1) {
     // end runs out to a fine point — no flat cap ever breaks the water
     let w = w0 + (w1 - w0) * (i / (S.length - 1));
     const u = i / (S.length - 1);
-    if (tipStart < 1) w *= tipStart + (1 - tipStart) * Math.min(1, u / 0.22);
-    if (tipEnd < 1) w *= tipEnd + (1 - tipEnd) * Math.min(1, (1 - u) / 0.22);
+    if (tipStart < 1) w *= tipStart + (1 - tipStart) * Math.min(1, u / tipLen);
+    if (tipEnd < 1) w *= tipEnd + (1 - tipEnd) * Math.min(1, (1 - u) / tipLen);
     L.push([S[i][0] - dy * w, S[i][1] + dx * w]);
     R.push([S[i][0] + dy * w, S[i][1] - dx * w]);
   }
@@ -165,13 +165,17 @@ function drawWyrmTheatre(ctx, run, t) {
     [g.x - g.s * 1.30, W - g.s * 0.28 + bob], [g.x - g.s * 1.50, W + 4],
   ], g.s * 0.16, g.s * 0.11, 0.08, 0.05); // out of his flank to a point, a tall arc, a steep dive to a point
   loopRibbon(ctx, [
-    [g.x - g.s * 1.88, W + 4], [g.x - g.s * 2.04, W - g.s * 0.20 + bob], [g.x - g.s * 2.40, W - g.s * 0.15 + bob],
+    [g.x - g.s * 1.80, W + 14], [g.x - g.s * 1.93, W - g.s * 0.11 + bob], [g.x - g.s * 2.06, W - g.s * 0.21 + bob],
+    [g.x - g.s * 2.40, W - g.s * 0.15 + bob],
     [(g.x - g.s * 2.40 + 336) / 2, W - 6 + bob], // a shallow sag in the long
     [336, 398], [272, 394], // run to the post — a swimming back, not a slide
-  ], g.s * 0.09, g.s * 0.06, 0.05, 1); // rises steep from a point; the post
+  ], g.s * 0.09, g.s * 0.06, 0.04, 1, 0.30); // the front end TAPERS down a
+  // long snout — thinner and thinner toward the crossing — and slips
+  // under the surface as a rounded point, never a thick rounded stub
   foamCollar(ctx, g.x - g.s * 0.52, W + 3, g.s * 0.15);
   foamCollar(ctx, g.x - g.s * 1.50, W + 3, g.s * 0.16);
-  foamCollar(ctx, g.x - g.s * 1.88, W + 3, g.s * 0.14);
+  foamCollar(ctx, g.x - g.s * 1.86, W + 3, g.s * 0.20); // a crown scaled to
+  // swallow the front dive's crossing whole
   ctx.lineCap = 'round';
   for (let i = 0; i < 3; i++) { // the coil: three wraps stepping down the
     const cy = 397 + i * 13, rx = 14 - i, ry = 5.5 + i * 0.5; // post — each
@@ -321,33 +325,43 @@ function drawBanner(ctx, run, t) {
   const f = run.fight;
   if (!f || !f.event) return;
   const e = f.event;
+  // the banner heads the callout stack: raised into the open sky and
+  // shifted left of the stack's column, because the rearing head
+  // reaches further left than the neck suggests — measured on a
+  // banner-free frame, its gold stands at x≈711 (y≈198) with the
+  // snout's fangs at x≈695 below y≈205. Centred on calloutX the box
+  // would meet the face at any readable width, so it sits 50 left:
+  // right edge ≈668, a clear 20+ px of sky from the dragon at every
+  // row it spans. It may rest on the moon's edge (background),
+  // never on the dragon.
+  const cx = calloutX(run) - 50;
   if (e.phase === 'tele') {
     const info = ABILITY_INFO[e.id];
     if (!info) return;
     const label = `⚠ ${info.word} — ${info.counter}`;
-    ctx.font = "800 27px system-ui, 'Segoe UI', sans-serif";
-    const w = ctx.measureText(label).width + 56;
-    const x = 640 - w / 2;
+    ctx.font = "800 18px system-ui, 'Segoe UI', sans-serif";
+    const w = ctx.measureText(label).width + 24;
+    const bx = Math.max(w / 2 + 8, Math.min(1272 - w / 2, cx));
     ctx.fillStyle = 'rgba(9,16,28,0.88)';
     ctx.beginPath();
-    ctx.roundRect(x, 168, w, 54, 12);
+    ctx.roundRect(bx - w / 2, 140, w, 54, 12);
     ctx.fill();
     ctx.strokeStyle = BANNER_COLORS[e.id];
     ctx.lineWidth = 2 + Math.sin(t * 12) * 0.7;
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(label, 640, 204);
+    ctx.fillText(label, bx, 176);
   } else if (e.id === 'phase') {
     ctx.font = "700 19px system-ui, 'Segoe UI', sans-serif";
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(199,125,255,0.9)';
-    ctx.fillText('THE CHAIN HANGS SLACK — HAULING DOES NOTHING', 640, 208);
+    ctx.fillText('THE CHAIN HANGS SLACK — HAULING DOES NOTHING', cx, 176);
   } else if (e.id === 'armor') {
     ctx.font = "700 19px system-ui, 'Segoe UI', sans-serif";
     ctx.textAlign = 'center';
     ctx.fillStyle = 'rgba(255,181,46,0.9)';
-    ctx.fillText('ARMORED — ONLY THE WEAK POINT DRAINS IT', 640, 208);
+    ctx.fillText('ARMORED — ONLY THE WEAK POINT DRAINS IT', cx, 176);
   }
 }
 
