@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KRAKENWAKE: harpoon the deep, work the cable tension or be dragged under — fill the 13-monster bestiary across 3 black seas in 6 nights, and kill the Mother Kraken</title>
+<style>
+  html, body { margin: 0; padding: 0; background: #05080f; height: 100%; }
+  body { display: flex; align-items: center; justify-content: center; font-family: system-ui, sans-serif; }
+  canvas {
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: auto; aspect-ratio: 16 / 9;
+    border-radius: 10px; box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720" aria-label="KRAKENWAKE: harpoon the deep, work the cable tension or be dragged under — fill the 13-monster bestiary across 3 black seas in 6 nights, and kill the Mother Kraken"></canvas>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
