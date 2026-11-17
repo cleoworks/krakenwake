@@ -6,6 +6,7 @@ import { drawFishShape } from './shapes.js';
 import { drawKraken } from './shapes2.js';
 import { drawDressing, drawWeatherFx } from './dressing.js';
 import { drawSkyExtras, drawWaterLife, drawSurfaceDressing, drawDockDetail, drawFightFx } from './scenery.js';
+import { drawTheatre } from './theatre.js';
 
 export const WATER_Y = 430;
 const DOCK_X = 168;
@@ -29,7 +30,7 @@ function drawSky(ctx, run, t) {
   const blood = WEATHERS[run.weatherIdx].name === 'Blood Moon';
   const g = ctx.createLinearGradient(0, 0, 0, WATER_Y);
   g.addColorStop(0, blood ? '#120a1e' : '#050914');
-  g.addColorStop(1, blood ? '#2a1226' : '#0d1b2e');
+  g.addColorStop(1, blood ? '#2a1226' : '#132740');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, WATER_Y);
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
@@ -41,25 +42,24 @@ function drawSky(ctx, run, t) {
     ctx.fillRect(x, y, 2, 2);
   }
   ctx.globalAlpha = 1;
-  // moon (red under a Blood Moon) with a soft halo
-  const mg = ctx.createRadialGradient(1085, 92, 10, 1085, 92, 120);
-  mg.addColorStop(0, blood ? 'rgba(232,72,63,0.5)' : 'rgba(210,228,244,0.35)');
-  mg.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = mg;
-  ctx.fillRect(940, 0, 290, 240);
+  // moon (red under a Blood Moon) with a soft halo — a stroked ring, not a
+  // radial-gradient field: the gradient cost too many PNG bytes
+  ctx.strokeStyle = blood ? 'rgba(232,72,63,0.28)' : 'rgba(210,228,244,0.22)';
+  ctx.lineWidth = 12;
+  ctx.beginPath();
+  ctx.arc(1085, 92, 54, 0, 6.29);
+  ctx.stroke();
   ctx.fillStyle = blood ? '#e8483f' : '#e8eef4';
   ctx.beginPath();
   ctx.arc(1085, 92, 44, 0, 6.29);
   ctx.fill();
   ctx.fillStyle = blood ? 'rgba(120,20,16,0.35)' : 'rgba(160,175,190,0.35)';
   ctx.beginPath();
-  ctx.arc(1070, 80, 9, 0, 6.29);
-  ctx.arc(1102, 108, 6, 0, 6.29);
+  ctx.arc(1070, 80, 9, 0, 6.29); ctx.arc(1102, 108, 6, 0, 6.29);
   ctx.fill();
   // far hills, then a nearer parallax ridge rolling the other way
   ctx.fillStyle = '#0a1522';
-  ctx.beginPath();
-  ctx.moveTo(0, WATER_Y);
+  ctx.beginPath(); ctx.moveTo(0, WATER_Y);
   for (let x = 0; x <= 1280; x += 80) ctx.lineTo(x, WATER_Y - 46 - 26 * Math.sin(x * 0.004 + 2));
   ctx.lineTo(1280, WATER_Y);
   ctx.fill();
@@ -74,14 +74,14 @@ function drawSky(ctx, run, t) {
 function drawWater(ctx, run, t) {
   const blood = WEATHERS[run.weatherIdx].name === 'Blood Moon';
   const g = ctx.createLinearGradient(0, WATER_Y, 0, 720);
-  g.addColorStop(0, blood ? '#1d2f45' : '#14304a');
-  g.addColorStop(1, '#050d18');
+  g.addColorStop(0, blood ? '#243a56' : '#1a3a56');
+  g.addColorStop(1, '#081426');
   ctx.fillStyle = g;
   ctx.fillRect(0, WATER_Y, 1280, 720 - WATER_Y);
   // swell lines drifting
   ctx.strokeStyle = 'rgba(160,210,240,0.13)';
   ctx.lineWidth = 2;
-  for (let row = 0; row < 5; row++) {
+  for (let row = 0; row < 4; row++) {
     const y = WATER_Y + 26 + row * 52;
     ctx.beginPath();
     for (let x = 0; x <= 1280; x += 32) {
@@ -94,24 +94,14 @@ function drawWater(ctx, run, t) {
   // even under a plain moon; her water remembers.
   const gx = 1085 + Math.sin(t * 0.4) * 22;
   ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : run.sea === 2 ? 'rgba(232,90,70,0.13)' : 'rgba(200,225,245,0.16)';
-  for (let i = 0; i < 16; i++) {
+  for (let i = 0; i < 13; i++) {
+    if (Math.sin(i * 3.7 + t * 0.6) > 0.55) continue; // the path breaks, like real glint
     const y = WATER_Y + 12 + i * 17;
     const w = 14 + 26 * Math.abs(Math.sin(i * 1.7 + t * 0.9));
     ctx.fillRect(gx - w / 2 + Math.sin(i * 2.3 + t) * 7, y, w, 3);
   }
-  // a second, finer swell layer close to the viewer
-  ctx.strokeStyle = 'rgba(160,210,240,0.07)';
-  ctx.lineWidth = 1.4;
-  for (let row = 0; row < 3; row++) {
-    const y = WATER_Y + 190 + row * 34;
-    ctx.beginPath();
-    for (let x = 0; x <= 1280; x += 24) {
-      const yy = y + Math.sin(x * 0.02 + t * 1.1 + row * 3) * 2.4;
-      x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
-    }
-    ctx.stroke();
-  }
-  if (WEATHERS[run.weatherIdx].name === 'Gale') {
+  // (the fine swell layer was cut for the screenshot byte budget)
+  if (WEATHERS[run.weatherIdx].name === 'Gale') { // wind streaks worrying the sky
     ctx.strokeStyle = 'rgba(200,225,245,0.18)';
     for (let i = 0; i < 7; i++) {
       const y = 60 + i * 55 + Math.sin(t * 2 + i) * 6;
@@ -124,6 +114,14 @@ function drawWater(ctx, run, t) {
 }
 
 function drawDockAndHunter(ctx, run) {
+  // with the Mother Kraken on the cable the whole dock strains against her
+  const strain = run.phase === 'fight' && run.fight && MONSTERS[run.fight.mi].shape === 'kraken';
+  if (strain) {
+    ctx.save();
+    ctx.translate(150, 414);
+    ctx.rotate(-0.016 - run.fight.tension * 0.00012);
+    ctx.translate(-150, -414);
+  }
   ctx.fillStyle = '#241a12';
   ctx.fillRect(24, 414, 250, 12);
   ctx.fillRect(44, 426, 14, 66);
@@ -149,6 +147,7 @@ function drawDockAndHunter(ctx, run) {
   ctx.moveTo(DOCK_X + 6, 378);
   ctx.lineTo(DOCK_X + 30, 356);
   ctx.stroke();
+  if (strain) ctx.restore();
 }
 
 // pole tip: bends back on the charge, strains down under tension
@@ -230,7 +229,7 @@ function drawMonster(ctx, run, t) {
     const p = lurePos(run);
     const near = Math.max(0, 1 - f.dist / 95);
     if (m.shape === 'kraken') {
-      drawKraken(ctx, p.x, WATER_Y + 6, 62 + near * 62, t);
+      drawKraken(ctx, p.x, WATER_Y + 6, 85 + near * 85, t);
     } else {
       const s = 20 + near * 30 + Math.min(16, f.kg * 0.3);
       const bob = Math.sin(t * 2.2) * 3;
@@ -239,7 +238,7 @@ function drawMonster(ctx, run, t) {
       ctx.fillStyle = 'rgba(220,240,255,0.5)';
       for (let i = 0; i < 5; i++) {
         const fx = p.x - s + ((i * 37 + Math.floor(t * 9) * 13) % Math.max(10, s * 2));
-        ctx.fillRect(fx, WATER_Y + 2 + (i % 3) * 3, 7, 3);
+        ctx.fillRect(fx, WATER_Y + 2 + (i % 3) * 3, 7, 3); // foam flecks at the surface line
       }
     }
   }
@@ -265,13 +264,13 @@ export function drawWorld(ctx, run, view, lite = false) {
   if (run.sea >= 1 && run.phase !== 'fight') {
     const tx = 900 + Math.sin(t * 0.21) * 260;
     ctx.strokeStyle = 'rgba(5,8,14,0.8)';
-    ctx.lineWidth = 15;
-    ctx.lineCap = 'round';
+    ctx.lineWidth = 15; ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(tx, 700);
     ctx.quadraticCurveTo(tx + 26, 620, tx - 8, 556 + Math.sin(t * 0.9) * 8);
     ctx.stroke();
   }
+  if (!lite) drawTheatre(ctx, run, t);
   // particles (splash bursts, coin bursts)
   for (const p of view.particles) {
     ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -283,8 +282,7 @@ export function drawWorld(ctx, run, view, lite = false) {
   if (run.phase === 'fight' && run.fight && run.fight.tension > 85) {
     const a = 0.13 + 0.09 * Math.sin(t * 11);
     const vg = ctx.createRadialGradient(640, 360, 300, 640, 360, 760);
-    vg.addColorStop(0, 'rgba(255,30,20,0)');
-    vg.addColorStop(1, `rgba(255,30,20,${a})`);
+    vg.addColorStop(0, 'rgba(255,30,20,0)'); vg.addColorStop(1, `rgba(255,30,20,${a})`);
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, 1280, 720);
   }

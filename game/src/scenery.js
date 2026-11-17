@@ -4,6 +4,7 @@
 // dressing.js, everything is placed from fixed hashes plus the frame
 // clock, so every frame — and every screenshot — agrees.
 import { staminaWord } from './fishing.js';
+import { MONSTERS } from './data.js';
 import { WATER_Y, lurePos } from './render.js';
 
 const hash = (i, k) => ((i * 2654435761 + k * 40503) % 1000) / 1000;
@@ -11,7 +12,7 @@ const hash = (i, k) => ((i * 2654435761 + k * 40503) % 1000) / 1000;
 // --- the sky: a second, finer star field and two slow cloud bands --------
 export function drawSkyExtras(ctx, run, t) {
   ctx.fillStyle = '#dfeaf6';
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 48; i++) {
     const x = hash(i, 11) * 1280;
     const y = 8 + hash(i, 12) * 330;
     if (Math.hypot(x - 1085, y - 92) < 78) continue;
@@ -27,14 +28,13 @@ export function drawSkyExtras(ctx, run, t) {
       const x = ((hash(i + band * 7, 13) * 1500 + t * (5 + band * 3)) % 1560) - 140;
       const y = yBase + hash(i + band * 7, 14) * 26;
       ctx.beginPath();
-      ctx.ellipse(x, y, 120 + hash(i, 15) * 90, 11 + band * 4, 0, 0, 6.29);
-      ctx.fill();
+      ctx.ellipse(x, y, 120 + hash(i, 15) * 90, 11 + band * 4, 0, 0, 6.29); ctx.fill();
     }
   }
 }
 
 // --- the water: foam, sparkle, and everything living in it ---------------
-function drawFoamAndSparkle(ctx, t) {
+function drawFoamAndSparkle(ctx, run, t) {
   // drifting foam flecks, short pale dashes riding the swell leftward
   ctx.strokeStyle = 'rgba(215,238,252,0.35)';
   ctx.lineWidth = 2;
@@ -48,13 +48,27 @@ function drawFoamAndSparkle(ctx, t) {
   ctx.stroke();
   // the third texture layer: fine sparkle, denser and smaller than dressing's
   ctx.fillStyle = '#e8f4ff';
-  for (let i = 0; i < 64; i++) {
+  for (let i = 0; i < 36; i++) {
     const x = hash(i, 25) * 1280;
     const y = WATER_Y + 10 + hash(i, 26) * 268;
     ctx.globalAlpha = 0.03 + 0.1 * Math.abs(Math.sin(t * 1.7 + i * 2.9));
     ctx.fillRect(x, y, 1.7, 1.2);
   }
   ctx.globalAlpha = 1;
+  // foam caps on the crests nearest the action — short bright arcs riding
+  // the surface around wherever the lure is working
+  if (run.phase === 'fight' || run.phase === 'wait') {
+    const p = lurePos(run);
+    ctx.strokeStyle = 'rgba(235,248,255,0.5)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      const fx = p.x - 90 + i * 34 + Math.sin(t * 1.8 + i * 2.2) * 5;
+      const fy = WATER_Y + 8 + (i % 3) * 7 + Math.sin(t * 2.3 + i) * 1.6;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 8, 3.5, 5.9);
+      ctx.stroke();
+    }
+  }
 }
 
 function drawSchool(ctx, t) {
@@ -69,10 +83,9 @@ function drawSchool(ctx, t) {
     ctx.beginPath();
     ctx.ellipse(fx, fy, s, s * 0.38, 0, 0, 6.29);
     ctx.fill();
-    ctx.beginPath();
+    ctx.beginPath(); // tail
     ctx.moveTo(fx - s, fy);
-    ctx.lineTo(fx - s * 1.5, fy - s * 0.42);
-    ctx.lineTo(fx - s * 1.5, fy + s * 0.42);
+    ctx.lineTo(fx - s * 1.5, fy - s * 0.42); ctx.lineTo(fx - s * 1.5, fy + s * 0.42);
     ctx.fill();
   }
 }
@@ -89,8 +102,7 @@ function drawJellies(ctx, t) {
     ctx.fillStyle = 'rgba(196,178,255,0.5)';
     ctx.beginPath();
     ctx.arc(jx, jy + bob, s, 3.14, 6.29);
-    ctx.quadraticCurveTo(jx, jy + bob + s * 0.4, jx - s, jy + bob);
-    ctx.fill();
+    ctx.quadraticCurveTo(jx, jy + bob + s * 0.4, jx - s, jy + bob); ctx.fill();
     ctx.strokeStyle = 'rgba(196,178,255,0.4)';
     ctx.lineWidth = 2;
     for (let k = -1; k <= 1; k++) {
@@ -117,7 +129,7 @@ function drawSeaweed(ctx, t) {
 }
 
 export function drawWaterLife(ctx, run, t) {
-  drawFoamAndSparkle(ctx, t);
+  drawFoamAndSparkle(ctx, run, t);
   drawSchool(ctx, t);
   if (run.sea === 2) drawJellies(ctx, t);
   drawSeaweed(ctx, t);
@@ -130,8 +142,7 @@ export function drawSurfaceDressing(ctx, run, t) {
   ctx.fillStyle = '#1c130c';
   ctx.fillRect(566, WATER_Y + 2 + bob(0), 30, 22);
   ctx.fillStyle = 'rgba(190,150,100,0.35)';
-  ctx.fillRect(566, WATER_Y + 8 + bob(0), 30, 3);
-  ctx.fillRect(566, WATER_Y + 17 + bob(0), 30, 3);
+  ctx.fillRect(566, WATER_Y + 8 + bob(0), 30, 3); ctx.fillRect(566, WATER_Y + 17 + bob(0), 30, 3);
   ctx.fillStyle = '#241a10';
   ctx.fillRect(636, WATER_Y + 4 + bob(2.1), 26, 20);
   ctx.strokeStyle = 'rgba(190,150,100,0.3)';
@@ -142,12 +153,9 @@ export function drawSurfaceDressing(ctx, run, t) {
     ctx.fillStyle = '#060c16';
     ctx.beginPath();
     ctx.moveTo(652, WATER_Y - 2);
-    ctx.lineTo(668, WATER_Y - 14);
-    ctx.lineTo(742, WATER_Y - 14);
-    ctx.lineTo(756, WATER_Y - 2);
+    ctx.lineTo(668, WATER_Y - 14); ctx.lineTo(742, WATER_Y - 14); ctx.lineTo(756, WATER_Y - 2);
     ctx.fill();
-    ctx.fillRect(694, WATER_Y - 40, 3, 27);
-    ctx.fillRect(722, WATER_Y - 33, 3, 20);
+    ctx.fillRect(694, WATER_Y - 40, 3, 27); ctx.fillRect(722, WATER_Y - 33, 3, 20);
     ctx.beginPath();
     ctx.moveTo(697, WATER_Y - 40);
     ctx.lineTo(697, WATER_Y - 15);
@@ -174,16 +182,13 @@ export function drawSurfaceDressing(ctx, run, t) {
 export function drawDockDetail(ctx, run, t) {
   // crates stacked at the dock's left end
   ctx.fillStyle = '#2a1e12';
-  ctx.fillRect(84, 388, 28, 26);
-  ctx.fillRect(112, 396, 24, 18);
+  ctx.fillRect(84, 388, 28, 26); ctx.fillRect(112, 396, 24, 18);
   ctx.strokeStyle = 'rgba(200,160,105,0.4)';
   ctx.lineWidth = 1.6;
   ctx.strokeRect(86, 390, 24, 22);
   ctx.beginPath();
-  ctx.moveTo(86, 390);
-  ctx.lineTo(110, 412);
-  ctx.moveTo(110, 390);
-  ctx.lineTo(86, 412);
+  ctx.moveTo(86, 390); ctx.lineTo(110, 412);
+  ctx.moveTo(110, 390); ctx.lineTo(86, 412);
   ctx.stroke();
   // a coiled rope by the hunter's boots
   ctx.strokeStyle = '#4a3820';
@@ -193,7 +198,22 @@ export function drawDockDetail(ctx, run, t) {
     ctx.ellipse(232, 409, r + 3, r * 0.45, 0, 0, 6.29);
     ctx.stroke();
   }
-  // the dock lantern: a post, an arm, and a warm light that flickers
+  // the dock lantern: a post, an arm, and a warm light that flickers. When
+  // the Mother Kraken is on the cable the whole dock strains and the
+  // lantern swings on its arm; its light pools on the water at the dock's
+  // foot — the warm second focal point of the fight scene.
+  const swing = run.fight && MONSTERS[run.fight.mi].shape === 'kraken' ? Math.sin(t * 3.1) * 5 : 0;
+  ctx.save();
+  ctx.translate(128, WATER_Y + 14);
+  ctx.scale(1, 0.22);
+  const pg = ctx.createRadialGradient(0, 0, 4, 0, 0, 105);
+  pg.addColorStop(0, 'rgba(255,180,90,0.13)');
+  pg.addColorStop(1, 'rgba(255,180,90,0)');
+  ctx.fillStyle = pg;
+  ctx.fillRect(-105, -105, 210, 210);
+  ctx.restore();
+  ctx.save();
+  ctx.translate(swing, 0);
   ctx.fillStyle = '#171008';
   ctx.fillRect(48, 366, 5, 48);
   ctx.fillRect(48, 366, 20, 4);
@@ -207,13 +227,12 @@ export function drawDockDetail(ctx, run, t) {
   ctx.fillRect(60, 371, 12, 15);
   ctx.fillStyle = '#ffcf6e';
   ctx.fillRect(63, 375, 6, 7);
+  ctx.restore();
   // a small red flag on the dock's end post, worrying at the wind
   ctx.strokeStyle = '#171008';
   ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.moveTo(266, 414);
-  ctx.lineTo(266, 356);
-  ctx.stroke();
+  ctx.moveTo(266, 414); ctx.lineTo(266, 356); ctx.stroke();
   ctx.fillStyle = '#a33327';
   ctx.beginPath();
   ctx.moveTo(266, 356);
@@ -227,6 +246,15 @@ export function drawFightFx(ctx, run, t) {
   if (run.phase !== 'fight' || !run.fight) return;
   const f = run.fight;
   const p = lurePos(run);
+  // reflection shimmer under a big monster: broken light on the water,
+  // wider and brighter the heavier she is
+  const rw = 40 + Math.min(90, f.kg * 1.6);
+  ctx.fillStyle = 'rgba(200,228,250,0.20)';
+  for (let i = 0; i < 7; i++) {
+    const y = WATER_Y + 16 + i * 13;
+    const w = rw * (0.5 + 0.5 * Math.abs(Math.sin(i * 1.9 + t * 1.4)));
+    ctx.fillRect(p.x - w / 2 + Math.sin(i * 2.7 + t * 1.1) * 6, y, w, 2.4);
+  }
   // thrash rings rolling off the monster
   ctx.strokeStyle = 'rgba(205,235,255,0.55)';
   ctx.lineWidth = 2;

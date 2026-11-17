@@ -77,6 +77,16 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
       ctx.lineTo(s * 0.25, -s * 1.25);
       ctx.lineTo(s * 0.5, -s * 0.35);
       ctx.fill();
+      marks(() => { // the sail membrane, translucent between the fin's rays
+        ctx.fillStyle = shade(color, 1.5);
+        ctx.globalAlpha *= 0.5;
+        ctx.beginPath();
+        ctx.moveTo(-s * 0.14, -s * 0.42);
+        ctx.lineTo(s * 0.26, -s * 1.14);
+        ctx.lineTo(s * 0.44, -s * 0.4);
+        ctx.quadraticCurveTo(s * 0.15, -s * 0.62, -s * 0.14, -s * 0.42);
+        ctx.fill();
+      });
       marks(() => { // fin rays
         ctx.strokeStyle = shade(color, 0.45);
         ctx.lineWidth = s * 0.05;
@@ -116,6 +126,23 @@ export function drawFishShape(ctx, shape, x, y, s, color, eye = '#ffd94d') {
           ctx.arc(px * s, py * s, pr * s, 0, 6.29);
           ctx.fill();
         }
+      });
+      marks(() => { // the lantern lure: a stalk over the head, a light at its end
+        ctx.strokeStyle = shade(color, 0.7);
+        ctx.lineWidth = s * 0.045;
+        ctx.beginPath();
+        ctx.moveTo(s * 0.42, -s * 0.42);
+        ctx.quadraticCurveTo(s * 0.62, -s * 0.78, s * 0.86, -s * 0.72);
+        ctx.stroke();
+        const lg = ctx.createRadialGradient(s * 0.88, -s * 0.7, 1, s * 0.88, -s * 0.7, s * 0.34);
+        lg.addColorStop(0, 'rgba(190,240,255,0.85)');
+        lg.addColorStop(1, 'rgba(190,240,255,0)');
+        ctx.fillStyle = lg;
+        ctx.fillRect(s * 0.54, -s * 1.04, s * 0.68, s * 0.68);
+        ctx.fillStyle = '#dff4ff';
+        ctx.beginPath();
+        ctx.arc(s * 0.88, -s * 0.7, s * 0.075, 0, 6.29);
+        ctx.fill();
       });
       eyeDot(0.45, -0.18, 0.13);
       break;

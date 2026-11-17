@@ -160,11 +160,27 @@ export function drawHUD(ctx, run, view) {
     ctx.fill();
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(zx(Math.min(snapAt, f.tension)) - 3, 602, 6, 36);
+    // SURGE pips beside the tension bar: banked charges in brass, the one
+    // still filling shows its progress; F spends a charge mid-fight
+    text(ctx, 'SURGE', 856, 600, 13, '#8fb8d4', 'left', 800);
+    for (let i = 0; i < 2; i++) {
+      const px = 856 + i * 28;
+      ctx.fillStyle = i < run.surgeCharges ? '#ffb52e' : 'rgba(255,255,255,0.12)';
+      rr(ctx, px, 608, 22, 24, 5);
+      ctx.fill();
+      if (i === run.surgeCharges && run.surgeFill > 0) {
+        ctx.fillStyle = 'rgba(255,181,46,0.5)';
+        rr(ctx, px, 608 + 24 * (1 - run.surgeFill), 22, 24 * run.surgeFill, 5);
+        ctx.fill();
+      }
+    }
+    text(ctx, '[F]', 912, 626, 15, '#cfe8ff', 'left', 800);
+    if (f.surgeT > 0) text(ctx, 'SURGING!', 856, 654, 15, '#ffb52e', 'left', 800);
     text(ctx, 'HOLD to reel in — release to slacken', 640, 668, 24, '#ffffff', 'center');
   } else {
     text(ctx, 'HOLD SPACE to charge your throw', 640, 640, 24, '#8fb8d4', 'center');
   }
-  text(ctx, 'SPACE hold/release: throw • strike • reel    S: Camp (shop + bestiary)    R: restart', 640, 706, 19, '#7fa6c4', 'center', 400);
+  text(ctx, 'SPACE hold/release: throw • strike • reel    F: Surge    S: Camp (shop + bestiary)    R: restart', 640, 706, 19, '#7fa6c4', 'center', 400);
   drawHuntPanels(ctx, run, view);
 }
 

@@ -43,6 +43,9 @@ export function createRun(seed) {
     nightGrades: [], // one letter per completed night, for the sea route
     feats: {}, // feat id -> true once earned
     charmReady: true, // Sailor's Charm re-arms every night
+    // --- v4 layers ---
+    surgeCharges: 0, // banked SURGE charges (max 2), spent with F in a fight
+    surgeFill: 0, // progress toward the next charge: hauls pay 0.5, vital ticks 0.25
   };
 }
 

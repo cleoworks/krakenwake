@@ -79,7 +79,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   stepCard(ctx, 450, 2, 'STRIKE', ['Wait for the telegraph — the lure dips,', 'rings spread. Strike the instant it bites.'], (c, x) => {
     text(c, '!', x + 316, 282, 44, '#ffd94d', 'center', 800);
   });
-  stepCard(ctx, 860, 3, 'HAUL', ['Hold to reel, release to slacken. Never', 'sit in the red — tire a fresh monster out.'], (c, x) => {
+  stepCard(ctx, 860, 3, 'HAUL', ['Hold to reel, release to slacken. Work the', 'gold weak point; answer warnings; F = Surge.'], (c, x) => {
     c.fillStyle = '#39d353';
     rr(c, x + 262, 254, 40, 12, 3);
     c.fill();

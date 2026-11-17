@@ -30,8 +30,16 @@ export function stageShot(name, view, burst) {
     markCaught(r, CAUGHT_9);
     r.phase = 'fight';
     r.castDist = 62;
-    r.fight = { mi: 12, kg: 58, dist: 62, tension: 63, t: 1.2, snapT: 0, surgePhase: 0, stamina: 48 };
-    burst(800, 436, 16, ['#dff2ff', '#9fd0ee', '#ffffff'], 170, 5);
+    r.surgeCharges = 1; r.surgeFill = 0.5;
+    // frozen at the read: her slam is telegraphed and rearing, the gold
+    // weak point is open on her dome, and a VITAL tick has just landed
+    r.fight = {
+      mi: 12, kg: 58, dist: 62, tension: 63, t: 6.4, snapT: 0, surgePhase: 0, stamina: 46,
+      wpNext: 5, wpT: 0.9, wpFake: false, wpDx: 0.3, wpDy: -0.1,
+      evIn: 8, evCount: 1, event: { id: 'slam', phase: 'tele', t: 0.35 },
+      surgeT: 0, vitalAcc: 0, vitalFlash: 0.4, spikeT: 0, inkT: 0,
+    };
+    burst(800, 436, 10, ['#dff2ff', '#9fd0ee', '#ffffff'], 170, 5);
     return { r, mode: 'game' };
   }
   if (name === 'briefing') {

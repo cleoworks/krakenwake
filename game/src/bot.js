@@ -20,14 +20,36 @@ export function makeBot() {
         return {};
       }
       if (run.phase === 'fight') {
+        const f = run.fight;
+        const t = f.tension;
+        const e = f.event;
+        // telegraphed lunges, slams and phases are answered by letting go
+        // before they land; a phased cable is slack water — reeling is wasted
+        if (e && e.phase === 'tele' && (e.id === 'lunge' || e.id === 'slam' || e.id === 'phase')) {
+          releasing = true;
+          return {};
+        }
+        if (e && e.phase === 'active' && e.id === 'phase') {
+          releasing = true;
+          return {};
+        }
+        // the monkfish lies in pale blue: hands off until the fake fades
+        if (f.wpT > 0 && f.wpFake) {
+          releasing = true;
+          return {};
+        }
         // pulse against a fresh monster (short holds, let the tension sit
         // in the yellow so its stamina drains); commit once it is tired.
-        const t = run.fight.tension;
-        const fresh = run.fight.stamina > 55;
+        const fresh = f.stamina > 55;
         const releaseAt = fresh ? 72 : 84;
         if (t > releaseAt) releasing = true;
         if (t < releaseAt - 26) releasing = false;
-        return releasing ? {} : { hold: true };
+        const out = releasing ? {} : { hold: true };
+        // a real weak point is worth holding for, even past the pulse line
+        if (f.wpT > 0 && !f.wpFake && t < 92) out.hold = true;
+        // spend a banked SURGE once the monster is fading and we are working it
+        if (out.hold && run.surgeCharges > 0 && f.stamina < 40 && !(f.surgeT > 0)) out.surge = true;
+        return out;
       }
       return {};
     },

@@ -160,13 +160,23 @@ export function drawKraken(ctx, x, y, s, t, color = '#07090f') {
     ctx.moveTo(fx, s * 0.1);
     ctx.quadraticCurveTo(cxp, -h * 0.6, x2, -h);
     ctx.stroke();
-    // suckers: pale cups sampled along the curve's inner face
-    ctx.fillStyle = 'rgba(238,205,192,0.55)';
+    // suckers: shaded cups sampled along the curve's inner face — a dark
+    // rim, a pale face, and a shadowed pit at the centre of each
     for (const tt of [0.3, 0.52, 0.74]) {
       const bx = (1 - tt) * (1 - tt) * fx + 2 * (1 - tt) * tt * cxp + tt * tt * x2;
       const by = (1 - tt) * (1 - tt) * s * 0.1 + 2 * (1 - tt) * tt * -h * 0.6 + tt * tt * -h;
+      const sr = s * 0.05 * (1 - tt * 0.4);
+      ctx.fillStyle = 'rgba(30,16,14,0.8)';
       ctx.beginPath();
-      ctx.arc(bx + s * 0.07, by, s * 0.045 * (1 - tt * 0.4), 0, 6.29);
+      ctx.arc(bx + s * 0.07, by, sr * 1.25, 0, 6.29);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(238,205,192,0.6)';
+      ctx.beginPath();
+      ctx.arc(bx + s * 0.07, by, sr, 0, 6.29);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(70,35,30,0.75)';
+      ctx.beginPath();
+      ctx.arc(bx + s * 0.07, by, sr * 0.45, 0, 6.29);
       ctx.fill();
     }
   }
@@ -179,6 +189,32 @@ export function drawKraken(ctx, x, y, s, t, color = '#07090f') {
   ctx.arc(0, 0, s, 3.14, 6.29);
   ctx.quadraticCurveTo(0, s * 0.42, -s, 0);
   ctx.fill();
+  // skin speckle: barnacle-pale freckles scattered over the dome, denser
+  // toward the crown — placed from a fixed hash so she never shimmers
+  ctx.fillStyle = 'rgba(214,200,180,0.30)';
+  for (let i = 0; i < 14; i++) {
+    const a = 3.3 + ((i * 2654435761) % 1000) / 1000 * 2.7;
+    const rad = s * (0.25 + ((i * 40503) % 1000) / 1000 * 0.68);
+    const px = Math.cos(a) * rad;
+    const py = Math.sin(a) * rad * 0.82;
+    if (py > -s * 0.06) continue;
+    ctx.beginPath();
+    ctx.arc(px, py, Math.max(1, s * 0.016 * (1 + (i % 3) * 0.5)), 0, 6.29);
+    ctx.fill();
+  }
+  // the beak: a dark hooked hint low between the eyes, mostly submerged
+  ctx.fillStyle = '#0d0507';
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.13, -s * 0.1);
+  ctx.quadraticCurveTo(0, s * 0.16, s * 0.13, -s * 0.1);
+  ctx.quadraticCurveTo(0, s * 0.02, -s * 0.13, -s * 0.1);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(232,190,160,0.35)';
+  ctx.lineWidth = Math.max(1, s * 0.02);
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.13, -s * 0.1);
+  ctx.quadraticCurveTo(0, s * 0.16, s * 0.13, -s * 0.1);
+  ctx.stroke();
   for (const d of [-0.36, 0.36]) {
     const hg = ctx.createRadialGradient(d * s, -s * 0.34, 1, d * s, -s * 0.34, s * 0.4);
     hg.addColorStop(0, 'rgba(255,59,48,0.55)');

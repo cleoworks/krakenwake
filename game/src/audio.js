@@ -68,6 +68,8 @@ export const sfx = {
   night() { tone(523, 0.4, 'sine', 0.1); tone(392, 0.5, 'sine', 0.1, null, 0.18); },
   feat() { tone(988, 0.1, 'triangle', 0.12); tone(1318, 0.16, 'triangle', 0.12, null, 0.08); },
   charm() { tone(1568, 0.14, 'sine', 0.12, 2093); tone(1046, 0.2, 'sine', 0.08, null, 0.05); },
+  warn() { tone(196, 0.16, 'sawtooth', 0.14, 147); tone(196, 0.16, 'sawtooth', 0.12, 147, 0.2); },
+  vital() { tone(1568, 0.06, 'square', 0.07); tone(2093, 0.09, 'square', 0.06, null, 0.05); },
   win() { [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.35, 'triangle', 0.14, null, i * 0.13)); },
   // the cable complaining: main calls this on a timer during fights
   creak(tension01) { tone(55 + tension01 * 170, 0.07, 'sawtooth', 0.03 + tension01 * 0.09); },

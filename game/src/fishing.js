@@ -4,6 +4,7 @@
 import { MONSTERS, HARPOONS, LURES, WEATHERS, DIFFICULTIES, NIGHT_SECONDS, SEASON_NIGHTS, poolFor } from './data.js';
 import { journalCount } from './state.js';
 import { hasBoon, makeDraftChoices, nightGrade } from './salvage.js';
+import { initFightFx, stepFightEvents, stepWeakPoint, addSurge } from './abilities.js';
 
 const ev = (run, type, data = {}) => run.events.push({ type, ...data });
 
@@ -93,6 +94,7 @@ function startFight(run) {
   const roll = hasBoon(run, 'sinkers') ? Math.pow(run.rng.next(), 0.85) : Math.pow(run.rng.next(), 1.25);
   const kg = m.kgMin + roll * (m.kgMax - m.kgMin);
   run.fight = { mi, kg, dist: run.castDist, tension: 12, t: 0, snapT: 0, surgePhase: run.rng.range(0, 6.28), stamina: 100 };
+  initFightFx(run, run.fight);
   run.wait = null;
   run.phase = 'fight';
   ev(run, 'strike', { mi });
@@ -113,6 +115,7 @@ function haul(run) {
   run.nightStats.coins += gained;
   run.nightStats.score += scoreGain;
   run.combo += 1;
+  addSurge(run, 0.5); // every haul banks half a SURGE charge
   run.bestCombo = Math.max(run.bestCombo, run.combo);
   run.hauled += 1;
   const b = run.bestiary[f.mi];
@@ -175,19 +178,40 @@ function stepFight(run, dt, input) {
   const gear = HARPOONS[run.harpoon];
   const diff = DIFFICULTIES[run.difficulty];
   f.t += dt;
+  const emit = (type, data = {}) => ev(run, type, data);
+  const mods = stepFightEvents(run, f, dt, input, emit);
+  const held = input.hold && !mods.phaseSlack; // a phased cable cannot be worked
+  const wp = stepWeakPoint(run, f, dt, { ...input, hold: held }, emit);
   const surge01 = 0.5 + 0.5 * Math.sin(f.t * 1.6 + f.surgePhase) * Math.sin(f.t * 0.53 + 1.7);
   const st = f.stamina / 100;
   const load = m.power * diff.power * (0.35 + 0.65 * Math.max(0, surge01)) * (0.85 + 0.3 * st);
-  if (input.hold) {
-    f.tension += (load * 2.05 - gear.control * 1.55) * dt;
-    const reelRate = gear.reel * (hasBoon(run, 'winch') ? 1.25 : 1);
+  // SURGE: spend a banked charge for 1.5 s of double reel on a hotter cable
+  if (f.surgeT > 0) f.surgeT -= dt;
+  const surgeKey = input.surge || (input.pressedKeys && input.pressedKeys.has('KeyF'));
+  if (surgeKey && !mods.phaseSlack && run.surgeCharges > 0 && f.surgeT <= 0) {
+    run.surgeCharges -= 1;
+    f.surgeT = 1.5;
+    ev(run, 'surge', { mi: f.mi });
+  }
+  if (held) {
+    let dT = (load * 2.05 - gear.control * 1.55) * dt;
+    if (f.surgeT > 0 && dT > 0) dT *= 1.5; // the surge climbs the tension faster
+    f.tension += dT;
+    const reelRate = gear.reel * (hasBoon(run, 'winch') ? 1.25 : 1) * (f.surgeT > 0 ? 2 : 1);
     f.dist -= reelRate * Math.max(0.35, 1.12 - f.tension / 160) * (0.68 + 0.32 * (1 - st)) * dt;
-    if (f.tension >= 50) f.stamina -= (8 + (f.tension - 50) * 0.28) * dt;
+    if (wp.exposed && wp.fake) {
+      f.tension += 12 * dt; // hauling on a pale lie: no drain, and the cable pays
+    } else if (mods.armor && !wp.exposed) {
+      f.stamina += 24 * dt; // the shell drinks the pull — triple regen
+    } else if (f.tension >= 50) {
+      f.stamina -= (8 + (f.tension - 50) * 0.28) * (wp.exposed ? 2.2 : 1) * dt;
+    }
   } else {
     f.tension -= 46 * dt;
     f.dist += (2 + m.power * 0.05) * dt;
-    f.stamina += 8 * diff.regen * (hasBoon(run, 'grip') ? 0.5 : 1) * dt;
+    f.stamina += (mods.armor ? 24 : 8 * diff.regen * (hasBoon(run, 'grip') ? 0.5 : 1)) * dt;
   }
+  if (f.spikeT > 0) f.tension += 50 * dt; // a lunge you held through lands now
   if (surge01 > 0.7) f.stamina -= 4 * dt; // thrashing tires it either way
   f.stamina = Math.min(100, Math.max(0, f.stamina));
   const snapAt = snapPoint(run);

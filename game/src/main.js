@@ -91,6 +91,8 @@ function drainEvents(r) {
       view.toastT = 2.2;
       sfx.charm();
     } else if (e.type === 'snap') { sfx.snap(); view.shake = 9; }
+    else if (e.type === 'ability') sfx.warn();
+    else if (e.type === 'vital') sfx.vital();
     else if (e.type === 'escape') sfx.escape();
     else if (e.type === 'night') {
       // the night that just ended becomes the draft's recap; the panels
