@@ -58,11 +58,23 @@ export function stageShot(name, view, burst) {
   }
   if (name === 'draft') {
     r.screen = 'draft';
-    r.night = 4; r.weatherIdx = 2; r.sea = 2; r.seasOpen = [true, true, true];
+    r.night = 4; r.weatherIdx = 2; r.sea = 1; r.seasOpen = [true, true, true];
     r.coins = 760; r.score = 3950; r.throws = 26; r.hauled = 22;
     r.boons = ['cable', 'winch'];
     r.nightGrades = ['S', 'A', 'S'];
-    r.nightSeas = [0, 0, 1];
+    r.nightSeas = [0, 0, 1, 2, 2, 2];
+    // behind the panel the night is still on: a Gale over the
+    // Drowning Deep, the Corpse Whale mid-fight on the chain, her
+    // weak point open — the backdrop (vendor/scenery.js) stages her
+    // flank and fluke in the water the panel cannot cover
+    r.phase = 'fight';
+    r.fight = {
+      mi: 3, dist: 55, tension: 42, t: 5.2, snapT: 0, surgePhase: 0, stamina: 58,
+      wpNext: 5, wpT: 0.9, wpFake: false, wpDx: 0.2, wpDy: 0.1,
+      evIn: 8, evCount: 0, event: null,
+      surgeT: 0, vitalAcc: 0, vitalFlash: 0, spikeT: 0, inkT: 0,
+      dashT: 0, dashCd: 0, counterT: 0, vanishFlash: 0,
+    };
     r.tonightHauls = [];
     r.lastNightHauls = [
       { mi: 0, coins: 41 }, { mi: 2, coins: 76 },
