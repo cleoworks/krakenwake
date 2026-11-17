@@ -101,12 +101,17 @@ export function drawHUD(ctx, run, view) {
   ctx.fill();
   text(ctx, `SCORE ${run.score}`, 752, 58, 23, '#ffe9a8');
   text(ctx, `BESTIARY ${journalCount(run)}/13`, 1248, 58, 24, '#ffe9a8', 'right');
-  // goal banner + the location/weather chip as ONE string on the same row
-  panel(ctx, 16, 88, 700, 44, 0.66);
-  text(ctx, `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`, 32, 118, 23, '#ffe9a8');
-  panel(ctx, 906, 88, 358, 44, 0.66);
-  text(ctx, `${SEAS[run.sea].name} • ${WEATHERS[run.weatherIdx].name}`, 1248, 118, 23, '#aee6ff', 'right');
-  drawBoonPips(ctx, run, 32, 142);
+  // goal + location as compact chips sized to their text — the
+  // row between them stays open sky; nothing spans the frame
+  const goalStr = `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`;
+  ctx.font = F(20);
+  panel(ctx, 16, 88, ctx.measureText(goalStr).width + 32, 36, 0.66);
+  text(ctx, goalStr, 32, 112, 20, '#ffe9a8');
+  const locStr = `${SEAS[run.sea].name} • ${WEATHERS[run.weatherIdx].name}`;
+  const locW = ctx.measureText(locStr).width + 32;
+  panel(ctx, 1264 - locW, 88, locW, 36, 0.66);
+  text(ctx, locStr, 1248, 112, 20, '#aee6ff', 'right');
+  drawBoonPips(ctx, run, 32, 134);
 
   if (run.phase === 'charge') {
     text(ctx, 'RELEASE TO THROW!', 640, 586, 32, '#ffffff', 'center');

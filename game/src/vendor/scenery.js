@@ -177,20 +177,21 @@ function drawSchool(ctx, t) {
 }
 
 function drawJellies(ctx, t) {
-  // jellyfish keeping station in the Maw — flat shapes only (a
-  // glow disc costs real PNG bytes), the bell and falls drawn plain
-  for (const [jx, jy, s, ph] of [[420, 585, 21, 0], [1096, 612, 14, 2.1]]) {
-    const bob = Math.sin(t * 0.8 + ph) * 6;
-    ctx.fillStyle = 'rgba(196,178,255,0.5)';
+  // jellyfish far below in the Maw — deep-water ghosts seen
+  // through the depths: sunk to the lower third, small, dim and
+  // blue-shifted at low alpha, never surface objects
+  for (const [jx, jy, s, ph] of [[420, 656, 13, 0], [1096, 670, 10, 2.1]]) {
+    const bob = Math.sin(t * 0.8 + ph) * 3;
+    ctx.fillStyle = 'rgba(110,150,215,0.15)';
     ctx.beginPath();
     ctx.arc(jx, jy + bob, s, 3.14, 6.29);
     ctx.quadraticCurveTo(jx, jy + bob + s * 0.4, jx - s, jy + bob); ctx.fill();
-    ctx.strokeStyle = 'rgba(196,178,255,0.4)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(110,150,215,0.11)';
+    ctx.lineWidth = 1.4;
     for (const k of [-1, 1]) {
       ctx.beginPath();
       ctx.moveTo(jx + k * s * 0.5, jy + bob + 2);
-      ctx.quadraticCurveTo(jx + k * s * 0.5 + Math.sin(t * 1.6 + ph + k) * 5, jy + bob + s * 1.1, jx + k * s * 0.4, jy + bob + s * 1.9);
+      ctx.quadraticCurveTo(jx + k * s * 0.5 + Math.sin(t * 1.6 + ph + k) * 3, jy + bob + s * 1.1, jx + k * s * 0.4, jy + bob + s * 1.9);
       ctx.stroke();
     }
   }
@@ -405,11 +406,12 @@ export function drawSurfaceDressing(ctx, run, t) {
   drawDraftBackdrop(ctx, run, t);
 }
 
-// --- the shore, inhabited: shrine island, boats, sea stacks ---
+// --- the shore, inhabited: shrine island, wreck, sea stacks ---
 // Things, not just texture: a torii standing on its island off
-// the dock's end, fishing boats working the water near and far,
-// rock teeth in the surf off the headland. All silhouette with
-// one or two lit details apiece — the poster's economy.
+// the dock's end, one far boat fleeing along the horizon, the
+// capsized wreck of one that didn't, rock teeth in the surf off
+// the headland. All silhouette with one or two lit details
+// apiece — the poster's economy.
 function drawShoreLife(ctx, t) {
   // the shrine island: a low mound, a torii, one pine
   ctx.fillStyle = '#060d18';
@@ -426,36 +428,57 @@ function drawShoreLife(ctx, t) {
   ctx.fillStyle = 'rgba(220,242,255,0.45)'; // foam worrying its foot
   ctx.fillRect(308, WATER_Y + 3, 8, 1.8); ctx.fillRect(360, WATER_Y + 4, 10, 1.8);
   ctx.fillRect(338, WATER_Y + 5, 6, 1.6);
-  // a fishing boat far out, small in the open water — hull, mast,
-  // one lantern burning amber, and its glint laid on the swell
-  ctx.fillStyle = '#081120';
+  // a fishing boat far off on the horizon, small and dim — hull,
+  // mast, one faint lantern: already running from these waters
+  ctx.fillStyle = 'rgba(8,17,32,0.72)';
   ctx.beginPath();
-  ctx.moveTo(796, WATER_Y + 1); ctx.lineTo(802, WATER_Y - 5);
-  ctx.lineTo(832, WATER_Y - 5); ctx.lineTo(838, WATER_Y + 1);
+  ctx.moveTo(803, WATER_Y + 1); ctx.lineTo(807, WATER_Y - 3);
+  ctx.lineTo(825, WATER_Y - 3); ctx.lineTo(829, WATER_Y + 1);
   ctx.closePath(); ctx.fill();
-  ctx.fillRect(815, WATER_Y - 19, 2, 14);
-  ctx.fillStyle = '#ffca7a';
-  ctx.beginPath(); ctx.arc(816, WATER_Y - 21, 1.8, 0, 6.29); ctx.fill();
-  ctx.fillStyle = 'rgba(255,190,100,0.16)';
-  ctx.fillRect(806, WATER_Y + 6, 20, 2);
-  // a nearer boat riding the lower water: hull, cabin, a
-  // fisherman sitting his watch, a lantern at the bow
-  const by = WATER_Y + 148 + Math.sin(t * 1.1) * 2;
+  ctx.fillRect(815, WATER_Y - 11, 1.4, 8);
+  ctx.fillStyle = 'rgba(255,202,122,0.55)';
+  ctx.beginPath(); ctx.arc(816, WATER_Y - 12.5, 1.1, 0, 6.29); ctx.fill();
+  ctx.fillStyle = 'rgba(255,190,100,0.07)';
+  ctx.fillRect(808, WATER_Y + 5, 12, 1.6);
+  // a capsized wreck in the lower water — the wyrm's earlier
+  // work: keel-up hull, a snapped mast stub, loose gear drifting.
+  // Nobody aboard. Nobody fishes this water and lives.
+  const by = WATER_Y + 148 + Math.sin(t * 1.1) * 1.2;
   ctx.fillStyle = '#0a1624';
-  ctx.beginPath();
-  ctx.moveTo(872, by); ctx.lineTo(880, by + 10); ctx.lineTo(936, by + 10);
-  ctx.lineTo(946, by); ctx.lineTo(938, by - 3); ctx.lineTo(880, by - 3);
+  ctx.beginPath(); // the hull, overturned, its keel ridge to the sky
+  ctx.moveTo(866, by + 9);
+  ctx.quadraticCurveTo(874, by - 12, 906, by - 13);
+  ctx.quadraticCurveTo(938, by - 12, 948, by + 9);
   ctx.closePath(); ctx.fill();
-  ctx.fillRect(892, by - 9, 16, 7); // cabin
-  ctx.beginPath(); ctx.arc(926, by - 8, 2.6, 0, 6.29); ctx.fill(); // his head
-  ctx.fillRect(924, by - 6, 4.4, 5); // his shoulders
-  ctx.fillRect(878, by - 13, 2, 11); // the bow lantern pole
-  ctx.fillStyle = '#ffca7a';
-  ctx.beginPath(); ctx.arc(879, by - 15, 1.9, 0, 6.29); ctx.fill();
-  ctx.fillStyle = 'rgba(255,190,100,0.15)';
-  ctx.fillRect(868, by + 14, 22, 2); // the lantern's glint
-  ctx.fillStyle = 'rgba(220,242,255,0.5)'; // foam at her waterline
-  ctx.fillRect(884, by + 11, 9, 1.8); ctx.fillRect(916, by + 12, 11, 1.8);
+  ctx.strokeStyle = 'rgba(140,175,205,0.28)'; // the keel line, catching what light there is
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(884, by - 10.5);
+  ctx.quadraticCurveTo(906, by - 13.5, 928, by - 10.5);
+  ctx.stroke();
+  ctx.fillStyle = '#0a1624';
+  ctx.beginPath(); // the mast, snapped: a stub leaning drowned off the stern
+  ctx.moveTo(944, by); ctx.lineTo(958, by + 13);
+  ctx.lineTo(955, by + 16); ctx.lineTo(941, by + 4);
+  ctx.closePath(); ctx.fill();
+  // a loose barrel worrying in the swell off her bow
+  const bx = 828 + Math.sin(t * 0.9) * 2, bw = by + 15 + Math.sin(t * 1.3) * 1.2;
+  ctx.fillStyle = '#0d1a2a';
+  ctx.beginPath(); ctx.ellipse(bx, bw, 6.5, 4.8, 0.3, 0, 6.29); ctx.fill();
+  ctx.strokeStyle = 'rgba(150,180,210,0.3)';
+  ctx.lineWidth = 1.1;
+  ctx.beginPath(); ctx.moveTo(bx - 5.4, bw - 2.6); ctx.lineTo(bx - 3.4, bw + 4.4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx + 3.8, bw - 4.2); ctx.lineTo(bx + 5.8, bw + 2.8); ctx.stroke();
+  // and one plank, turning slowly, that used to be her deck
+  ctx.save();
+  ctx.translate(972, by + 18 + Math.sin(t * 0.8 + 1) * 1.2);
+  ctx.rotate(0.32 + Math.sin(t * 0.5) * 0.05);
+  ctx.fillStyle = '#0d1a2a';
+  ctx.fillRect(-11, -1.8, 22, 3.6);
+  ctx.restore();
+  ctx.fillStyle = 'rgba(220,242,255,0.5)'; // foam worrying the wreck's edges
+  ctx.fillRect(872, by + 9, 10, 1.8); ctx.fillRect(930, by + 10, 12, 1.8);
+  ctx.fillRect(896, by + 11, 8, 1.6);
   // sea stacks off the headland — rock teeth standing in the surf
   ctx.fillStyle = '#060d18';
   ctx.beginPath();
