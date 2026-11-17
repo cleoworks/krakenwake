@@ -43,11 +43,14 @@ export function calloutX(run) {
 function starY(i) { return ((i * 2654435761) % 1000) / 1000; }
 function drawSky(ctx, run, t) {
   const blood = WEATHERS[run.weatherIdx].name === 'Blood Moon';
-  const g = ctx.createLinearGradient(0, 0, 0, WATER_Y);
-  g.addColorStop(0, blood ? '#1e1030' : '#081226');
-  g.addColorStop(1, blood ? '#472040' : '#1f3c5c');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 1280, WATER_Y);
+  // the sky as eight flat bands stepping down to the horizon colour:
+  // a continuous gradient costs ~17 KB of screenshot PNG, flat bands
+  // read as the same dusk at a glance and cost almost nothing
+  const sky = blood
+    ? ['#1e1030', '#241232', '#2a1535', '#301737', '#351939', '#3b1b3c', '#411e3e', '#472040']
+    : ['#081226', '#0b182e', '#0f1e35', '#12243d', '#152a45', '#19304d', '#1c3654', '#1f3c5c'];
+  const bh = WATER_Y / sky.length;
+  sky.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(0, Math.floor(i * bh), 1280, Math.ceil(bh) + 1); });
   ctx.fillStyle = 'rgba(255,255,255,0.75)';
   for (let i = 0; i < 18; i++) {
     const x = (i * 173.3) % 1280;

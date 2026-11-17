@@ -198,28 +198,96 @@ export function blendCrossing(ctx, x, y, r, t, ph = 0) {
   }
 }
 
-// The horned head in profile facing left: a longer snout than any fish
-// in the bestiary, horns swept far back. maw 0..1 drops the jaw;
+// a tapered strand along a cubic bezier, in head units: thick at the
+// root, hair-fine at the tip — whisker barbels, the chin beard, and
+// the antler beams are all strands of different weights.
+function strand(ctx, s, p, w0, w1, fill) {
+  const P = (t) => {
+    const u = 1 - t;
+    return [u * u * u * p[0] + 3 * u * u * t * p[2] + 3 * u * t * t * p[4] + t * t * t * p[6],
+      u * u * u * p[1] + 3 * u * u * t * p[3] + 3 * u * t * t * p[5] + t * t * t * p[7]];
+  };
+  const N = 10, L = [], R = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, pt = P(t), a = P(Math.max(0, t - 0.04)), b = P(Math.min(1, t + 0.04));
+    let dx = b[0] - a[0], dy = b[1] - a[1];
+    const m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
+    const w = (w0 + (w1 - w0) * t) / 2;
+    L.push([(pt[0] - dy * w) * s, (pt[1] + dx * w) * s]);
+    R.push([(pt[0] + dy * w) * s, (pt[1] - dx * w) * s]);
+  }
+  poly(ctx, [...L, ...R.reverse()], fill);
+}
+
+// the horns: TWO bold blades, UNBRANCHED — one great horn curving off
+// the skull in a smooth S, swept far back, and a shorter second blade
+// behind it, roughly parallel. A dragon's weapons, not a deer's rack:
+// no tines, no branching, just taper and curve.
+// (ox, oy) shifts the root; k scales the pair; fill shades it.
+function horns(ctx, s, ox, oy, k, fill) {
+  const P = (pts) => pts.map((v, i) => (i % 2 ? oy + v * k : ox + v * k));
+  strand(ctx, s, P([0.06, -0.13, 0.13, -0.25, 0.26, -0.31, 0.41, -0.40]), 0.078 * k, 0.004, fill); // the great horn
+  strand(ctx, s, P([0.17, -0.095, 0.24, -0.16, 0.31, -0.20, 0.40, -0.265]), 0.046 * k, 0.004, fill); // the second blade
+}
+
+// The DRAGON head in profile facing left — not a snake's smooth wedge:
+// a squared muzzle with nostril bumps, a heavy brow plate over the red
+// eye, two bold unbranched HORN blades swept back, long whisker BARBELS streaming back from
+// the snout, a finned MANE flaring behind the jaw, a fang row along the
+// jaw line and a small beard under the chin. maw 0..1 drops the jaw;
 // rear 0..1 cocks the head back for the slam telegraph.
 function head(ctx, s, K, hx, hy, maw, rear) {
   ctx.save(); ctx.translate(hx, hy); ctx.rotate(-0.06 - rear * 0.10);
-  poly(ctx, [[0.10, -0.13], [0.36, -0.34], [0.17, -0.06]].map(p => [p[0] * s, p[1] * s]), BRONZE); // horn, swept back
-  poly(ctx, [[0.02, -0.15], [0.22, -0.42], [0.09, -0.05]].map(p => [p[0] * s, p[1] * s]), shade(BRONZE, 0.8));
-  poly(ctx, [[0.13, 0.02], [0.27, 0.06], [0.12, 0.10]].map(p => [p[0] * s, p[1] * s]), BRONZE); // cheek spike
-  poly(ctx, [[0.16, -0.10], [-0.05, -0.17], [-0.34, -0.12], [-0.48, -0.03], [-0.40, 0.05], [0.02, 0.07], [0.20, 0.05]]
-    .map(p => [p[0] * s, p[1] * s]), AMBER); // the skull, deep amber — its rear
-  // runs long so the skull overlaps the neck top and the join blends
-  poly(ctx, [[0.16, -0.10], [-0.05, -0.17], [-0.34, -0.12], [-0.20, -0.062], [-0.02, -0.072]]
-    .map(p => [p[0] * s, p[1] * s]), shade(BASE, 1.3)); // lit crown — its lower
-  // edge BOWS with the skull instead of cutting straight across it
-  K.teeth(-0.45, 0.03, 2, 0.10, 0.055); // upper fangs
-  K.slitEye(-0.20, -0.05, 0.085); // the red eye under its brow
-  ctx.strokeStyle = '#2a1804'; ctx.lineWidth = Math.max(1.2, s * 0.022);
-  ctx.beginPath(); ctx.moveTo(-0.28 * s, -0.09 * s); ctx.lineTo(-0.08 * s, -0.105 * s); ctx.stroke();
+  const M = (pts) => pts.map(p => [p[0] * s, p[1] * s]);
+  // the finned mane, layered membranes flaring behind the jaw — outer
+  // deep, inner lit, bronze rays running from the cheek anchor
+  poly(ctx, M([[0.10, -0.16], [0.26, -0.26], [0.42, -0.18], [0.47, 0.02], [0.40, 0.22], [0.24, 0.30], [0.13, 0.16]]), shade(AMBER, 0.92));
+  poly(ctx, M([[0.12, -0.10], [0.24, -0.16], [0.36, -0.09], [0.385, 0.05], [0.31, 0.19], [0.18, 0.20], [0.13, 0.06]]), BASE);
+  ctx.strokeStyle = 'rgba(125,82,32,0.85)'; ctx.lineWidth = Math.max(1, s * 0.013);
+  for (const [rx, ry] of [[0.40, -0.17], [0.455, 0.02], [0.385, 0.205], [0.26, 0.285]]) {
+    ctx.beginPath(); ctx.moveTo(0.14 * s, 0.0); ctx.lineTo(rx * s, ry * s); ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(255,226,150,0.75)';
+  ctx.beginPath(); ctx.moveTo(0.26 * s, -0.26 * s); ctx.lineTo(0.42 * s, -0.18 * s);
+  ctx.lineTo(0.47 * s, 0.02 * s); ctx.lineTo(0.40 * s, 0.22 * s); ctx.stroke();
+  horns(ctx, s, -0.035, 0.01, 0.88, shade(BRONZE, 0.62)); // the far horns, darker, root hidden by the skull
+  poly(ctx, M([[0.20, -0.06], [0.04, -0.15], [-0.14, -0.175], [-0.32, -0.155], [-0.455, -0.12], [-0.515, -0.06], [-0.52, -0.005], [-0.475, 0.04], [-0.22, 0.062], [0.02, 0.068], [0.20, 0.04]]), AMBER);
+  // the skull, deep amber — a SQUARED muzzle: the front edge drops near-
+  // vertical instead of rounding away, and the rear runs long so the
+  // skull overlaps the neck top and the join blends
+  poly(ctx, M([[0.20, -0.06], [0.04, -0.15], [-0.14, -0.175], [-0.32, -0.155], [-0.455, -0.12], [-0.40, -0.075], [-0.18, -0.068], [0.02, -0.075]]), shade(BASE, 1.3));
+  // lit crown — its lower edge BOWS with the skull instead of cutting across
+  poly(ctx, M([[-0.345, -0.15], [-0.06, -0.175], [-0.035, -0.12], [-0.16, -0.10], [-0.315, -0.105]]), shade(BRONZE, 0.85));
+  // the BROW PLATE: a heavy bronze slab over the eye, lit along its top
+  ctx.strokeStyle = 'rgba(255,226,150,0.7)'; ctx.lineWidth = Math.max(1, s * 0.011);
+  ctx.beginPath(); ctx.moveTo(-0.345 * s, -0.15 * s); ctx.lineTo(-0.06 * s, -0.175 * s); ctx.stroke();
+  for (const [nx, ny, nr] of [[-0.475, -0.125, 0.030], [-0.422, -0.136, 0.023]]) { // nostril bumps on the muzzle tip
+    ctx.fillStyle = shade(AMBER, 1.18);
+    ctx.beginPath(); ctx.ellipse(nx * s, ny * s, nr * s, nr * s * 0.68, 0, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#2a1804';
+    ctx.beginPath(); ctx.ellipse((nx - 0.003) * s, (ny - 0.008) * s, nr * s * 0.3, nr * s * 0.22, 0, 0, 6.29); ctx.fill();
+  }
+  K.slitEye(-0.205, -0.052, 0.088); // the red eye, glaring out from under the brow
+  ctx.strokeStyle = '#2a1804'; ctx.lineWidth = Math.max(1.2, s * 0.02);
+  ctx.beginPath(); ctx.moveTo(-0.345 * s, -0.112 * s); ctx.lineTo(-0.27 * s, -0.058 * s); ctx.stroke(); // the glare slash
+  ctx.lineWidth = Math.max(1, s * 0.013); ctx.globalAlpha = 0.85;
+  ctx.beginPath(); ctx.moveTo(-0.505 * s, 0.018 * s); ctx.lineTo(-0.06 * s, 0.05 * s); ctx.stroke(); // the mouth line
+  ctx.globalAlpha = 1;
+  horns(ctx, s, 0, 0, 1, BRONZE); // the near horns, full bronze
+  // whisker barbels: two long strands streaming BACK from the snout —
+  // one arcing high over the brow, one flowing under the jaw
+  strand(ctx, s, [-0.505, -0.07, -0.36, -0.27, -0.02, -0.385, 0.27, -0.345], 0.02, 0.0025, shade(CREAM, 1.06));
+  strand(ctx, s, [-0.475, 0.035, -0.33, 0.15, 0.0, 0.205, 0.32, 0.125], 0.018, 0.0025, shade(CREAM, 1.06));
+  K.teeth(-0.495, 0.03, 2, 0.115, 0.042); // two long front fangs…
+  K.teeth(-0.40, 0.036, 4, 0.052, 0.046); // …and the fang row behind them
+  K.teeth(-0.20, 0.04, 3, 0.04, 0.042);
   ctx.save(); ctx.translate(0.10 * s, 0.05 * s); ctx.rotate(maw * 0.55); // the jaw
-  poly(ctx, [[0.02, -0.01], [-0.36, 0.015], [-0.50, 0.055], [-0.40, 0.095], [0.02, 0.075]]
-    .map(p => [p[0] * s, p[1] * s]), shade(AMBER, 1.25));
-  K.teeth(-0.42, 0.028, 1, -0.06, 0.045); // one lower fang, pointing up
+  poly(ctx, M([[0.02, -0.005], [-0.28, 0.008], [-0.45, 0.022], [-0.525, 0.05], [-0.50, 0.088], [-0.30, 0.105], [0.02, 0.078]]), shade(AMBER, 1.25));
+  // an angular jaw with a squared chin corner, not a smooth scoop
+  K.teeth(-0.52, 0.045, 1, -0.062, 0.038); // lower fang, pointing up at the chin
+  K.teeth(-0.44, 0.04, 2, -0.038, 0.04); // and two smaller teeth behind it
+  strand(ctx, s, [-0.50, 0.075, -0.52, 0.13, -0.48, 0.165, -0.42, 0.185], 0.015, 0.002, shade(CREAM, 1.05)); // the chin beard
+  strand(ctx, s, [-0.435, 0.082, -0.44, 0.13, -0.40, 0.155, -0.345, 0.17], 0.012, 0.002, shade(CREAM, 1.05));
   ctx.restore(); ctx.restore();
 }
 
@@ -265,8 +333,11 @@ export function drawWyrmGlyph(ctx, x, y, s, color, eye = '#ffd23e') {
   ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.4, s * 0.16); ctx.lineCap = 'round';
   ctx.beginPath(); ctx.arc(s * 0.16, s * 0.14, s * 0.30, Math.PI * 0.85, Math.PI * 2.3); ctx.stroke(); // coil
   ctx.beginPath(); ctx.moveTo(-s * 0.02, s * 0.05); ctx.quadraticCurveTo(-s * 0.10, -s * 0.18, -s * 0.17, -s * 0.32); ctx.stroke(); // neck
+  poly(ctx, [[-0.07, -0.33], [0.06, -0.26], [-0.04, -0.17]].map(p => [p[0] * s, p[1] * s]), shade(color, 0.85)); // mane tick behind the jaw
   poly(ctx, [[-0.31, -0.45], [-0.05, -0.51], [-0.10, -0.30], [-0.29, -0.29]].map(p => [p[0] * s, p[1] * s]), shade(color, 1.15)); // head
-  poly(ctx, [[-0.08, -0.49], [0.07, -0.64], [0.0, -0.43]].map(p => [p[0] * s, p[1] * s]), BRONZE); // horn
+  poly(ctx, [[-0.08, -0.49], [0.07, -0.64], [0.0, -0.43]].map(p => [p[0] * s, p[1] * s]), BRONZE); // horn blade, unbranched
+  ctx.strokeStyle = color; ctx.lineWidth = Math.max(0.8, s * 0.05); // the whisker, streaming back
+  ctx.beginPath(); ctx.moveTo(-0.30 * s, -0.40 * s); ctx.quadraticCurveTo(-0.16 * s, -0.50 * s, 0.05 * s, -0.44 * s); ctx.stroke();
   K.slitEye(-0.20, -0.385, 0.05);
   ctx.restore();
 }
