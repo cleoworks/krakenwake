@@ -7,10 +7,11 @@ import { text, panel, rr } from './ui.js';
 import { drawWorld } from './render.js';
 import { drawFishShape } from './vendor/shapes.js';
 import { drawWyrmGlyph } from './vendor/wyrm.js';
+import { screenTexture } from './vendor/screens.js';
 
 export function briefingLayout() {
   const diffs = DIFFICULTIES.map((d, i) => ({ idx: i, x: 40 + i * 410, y: 474, w: 380, h: 56 }));
-  return { diffs, sail: { x: 624, y: 560, w: 272, h: 64 } };
+  return { diffs, sail: { x: 526, y: 560, w: 258, h: 64 } };
 }
 
 function pill(ctx, x, label, line, color) {
@@ -33,12 +34,15 @@ function stepCard(ctx, x, n, title, lines, icon) {
 }
 
 function drawDemoWindow(ctx, demo, view) {
-  const { x, y, w, h } = { x: 912, y: 548, w: 328, h: 140 };
+  const { x, y, w, h } = { x: 800, y: 548, w: 440, h: 140 };
   ctx.save();
   rr(ctx, x, y, w, h, 10);
   ctx.clip();
-  ctx.translate(x, y - 16);
-  ctx.scale(w / 1280, w / 1280);
+  // frame the action: the slice from the moon's sky down through the
+  // waterline, where the hunt in the window is actually happening
+  const s = w / 1280;
+  ctx.translate(x, y - 100 * s);
+  ctx.scale(s, s);
   drawWorld(ctx, demo, view, true); // lite: at this size the fine scenery is mush
   ctx.restore();
   ctx.strokeStyle = 'rgba(150,210,245,0.5)';
@@ -54,10 +58,11 @@ function drawDemoWindow(ctx, demo, view) {
 export function drawBriefing(ctx, sel, best, last, demo, view) {
   // scrim over the living sea so every word lands
   const g = ctx.createLinearGradient(0, 0, 0, 720);
-  g.addColorStop(0, 'rgba(3,6,14,0.66)');
-  g.addColorStop(1, 'rgba(3,6,14,0.82)');
+  g.addColorStop(0, 'rgba(3,6,14,0.76)');
+  g.addColorStop(1, 'rgba(3,6,14,0.89)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, 1280, 720);
+  screenTexture(ctx);
 
   text(ctx, 'WYRMWAKE', 640, 94, 76, '#ffd94d', 'center', 800);
   text(ctx, 'Harpoon the deep. Fill the bestiary. Kill the King Wyrm.', 640, 130, 24, '#eaf6ff', 'center');
@@ -139,7 +144,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   }
 
   // BEST panel + the last hunt, bottom left
-  panel(ctx, 40, 548, 560, 140, 0.8);
+  panel(ctx, 40, 548, 470, 140, 0.8);
   text(ctx, 'BEST HUNT', 60, 578, 17, '#8fb8d4', 'left', 800);
   if (best && best.result) {
     text(ctx, `${best.result} — GRADE ${best.grade || '—'} • SCORE ${best.score || 0}`, 60, 606, 18.5, '#ffe9a8');
@@ -148,7 +153,7 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
     text(ctx, 'No hunts yet — the bestiary is unwritten.', 60, 606, 17, '#cfe8ff', 'left', 400);
   }
   if (last && last.result) {
-    text(ctx, `LAST HUNT: ${last.result} • ${last.species}/13 • score ${last.score} • grade ${last.grade}`, 60, 664, 15.5, '#8fb8d4', 'left', 400);
+    text(ctx, `LAST HUNT: ${last.result} • ${last.species}/13 • score ${last.score} • grade ${last.grade}`, 60, 664, 14.5, '#8fb8d4', 'left', 400);
   } else {
     text(ctx, 'LAST HUNT: —', 60, 664, 15.5, '#5f7d99', 'left', 400);
   }

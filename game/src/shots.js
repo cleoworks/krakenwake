@@ -48,10 +48,19 @@ export function stageShot(name, view, burst) {
     return { r, mode: 'game' };
   }
   if (name === 'briefing') {
+    // the demo window stages the hunt itself: the King Wyrm on the
+    // chain in his own Maw under the Blood Moon — moon, glint, chain
+    // arc and all — while the same sea glows dimly behind the scrim
     const demoShot = createRun(7);
-    demoShot.sea = 1; demoShot.weatherIdx = 1; demoShot.castDist = 58;
-    demoShot.phase = 'wait';
-    demoShot.wait = { t: 2, biteIn: 3, open: false, window: 0, telegraph: true, fakes: [], dip: 0.2 };
+    demoShot.sea = 2; demoShot.weatherIdx = 3; demoShot.castDist = 73;
+    demoShot.phase = 'fight';
+    demoShot.fight = {
+      mi: 12, dist: 73, tension: 63, t: 6.4, snapT: 0, surgePhase: 2.0, stamina: 46,
+      wpNext: 5, wpT: 0.9, wpFake: false, wpDx: 0.3, wpDy: 0.9,
+      evIn: 8, evCount: 1, event: null,
+      surgeT: 0, vitalAcc: 0, vitalFlash: 0, spikeT: 0, inkT: 0,
+      dashT: 0, dashCd: 0, counterT: 0, vanishFlash: 0,
+    };
     // the BEST on the briefing is the very season the victory screen
     // shows — same score, grade, combo and coins
     const shotBest = { result: 'BESTIARY COMPLETE', species: 13, combo: 11, coins: 4210, score: 9650, grade: 'S' };
