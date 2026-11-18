@@ -67,9 +67,20 @@ export function drawSkyExtras(ctx, run, t) {
     }
   }
   ctx.globalAlpha = 1;
+  // the moon's glow: flat discs of falling alpha laid over the sky
+  // around it — a radial falloff in the poster's own language, so
+  // the sky near the moon is LIT, dimming outward to the flat bands.
+  // Warm for the Blood Moon, pale silver for a plain moon. Laid
+  // before the halo rings, and thin enough that the moon's face
+  // and its craters still read through the light.
+  const bloodMoon = WEATHERS[run.weatherIdx].name === 'Blood Moon';
+  for (const [gr, ga] of [[124, 0.040], [88, 0.060]]) {
+    ctx.fillStyle = bloodMoon ? `rgba(255,110,80,${ga})` : `rgba(205,225,248,${ga * 0.8})`;
+    ctx.beginPath(); ctx.arc(MOON_X, MOON_Y, gr, 0, 6.29); ctx.fill();
+  }
   // a soft halo breathing around the Blood Moon — ring strokes, not
   // a filled disc, so the moon's face stays clean under its glow
-  if (WEATHERS[run.weatherIdx].name === 'Blood Moon') {
+  if (bloodMoon) {
     ctx.strokeStyle = 'rgba(232,72,63,0.15)';
     ctx.lineWidth = 10;
     ctx.beginPath(); ctx.arc(MOON_X, MOON_Y, 75, 0, 6.29); ctx.stroke();
@@ -311,7 +322,7 @@ function drawDeepSwell(ctx, run, t) {
   const gx = MOON_X + Math.sin(t * 0.4) * 22;
   // a broad wash down the whole column first — the moon's road
   // through the lower water, not just its bright rungs
-  ctx.fillStyle = blood ? 'rgba(232,72,63,0.05)' : run.sea === 2 ? 'rgba(232,90,70,0.04)' : 'rgba(200,225,245,0.045)';
+  ctx.fillStyle = blood ? 'rgba(232,72,63,0.085)' : run.sea === 2 ? 'rgba(232,90,70,0.07)' : 'rgba(200,225,245,0.07)';
   ctx.fillRect(gx - 48, WATER_Y + 10, 96, 262);
   ctx.fillStyle = blood ? 'rgba(232,72,63,0.20)' : run.sea === 2 ? 'rgba(232,90,70,0.13)' : 'rgba(200,225,245,0.16)';
   for (let i = 5; i < 10; i++) {
@@ -422,6 +433,8 @@ export function drawSurfaceDressing(ctx, run, t) {
   ctx.fill();
   ctx.fillStyle = '#0a0f16';
   ctx.fillRect(1150, WATER_Y - 45, 3, 16);
+  ctx.fillStyle = 'rgba(255,190,100,0.10)';
+  ctx.beginPath(); ctx.arc(1151.5, WATER_Y - 47, 10, 0, 6.29); ctx.fill();
   ctx.fillStyle = '#ffcf6e';
   ctx.beginPath(); ctx.arc(1151.5, WATER_Y - 47, 2.2, 0, 6.29); ctx.fill();
   ctx.fillStyle = 'rgba(255,190,100,0.18)';
@@ -430,6 +443,8 @@ export function drawSurfaceDressing(ctx, run, t) {
   // of the horizon, so the eye travels the whole frame
   ctx.fillStyle = '#050a12';
   ctx.fillRect(62, WATER_Y - 86, 4, 20);
+  ctx.fillStyle = 'rgba(210,228,246,0.10)';
+  ctx.beginPath(); ctx.arc(64, WATER_Y - 89, 8, 0, 6.29); ctx.fill();
   ctx.fillStyle = 'rgba(230,238,244,0.8)';
   ctx.beginPath(); ctx.arc(64, WATER_Y - 89, 2, 0, 6.29); ctx.fill();
   drawShoreLife(ctx, t);
@@ -636,7 +651,7 @@ export function drawDockDetail(ctx, run, t) {
   ctx.save();
   ctx.translate(128, WATER_Y + 14);
   ctx.scale(1, 0.22);
-  ctx.fillStyle = 'rgba(255,180,90,0.05)';
+  ctx.fillStyle = 'rgba(255,180,90,0.085)';
   ctx.beginPath(); ctx.arc(0, 0, 58, 0, 6.29); ctx.fill();
   ctx.restore();
   ctx.save();
@@ -645,6 +660,11 @@ export function drawDockDetail(ctx, run, t) {
   ctx.fillRect(48, 366, 5, 48);
   ctx.fillRect(48, 366, 20, 4);
   const fl = 0.82 + 0.18 * Math.sin(t * 9.3) * Math.sin(t * 3.7);
+  // the lantern's halo, breathing with its flicker: a wide, thin
+  // disc of warm light around the lamp's tight glow, so the dock's
+  // corner of the night is lit, not just dotted
+  ctx.fillStyle = `rgba(255,190,100,${0.09 * fl})`;
+  ctx.beginPath(); ctx.arc(66, 380, 30, 0, 6.29); ctx.fill();
   ctx.fillStyle = `rgba(255,196,96,${0.16 * fl})`;
   ctx.beginPath(); ctx.arc(66, 380, 27, 0, 6.29); ctx.fill();
   ctx.fillStyle = '#0d0a06';

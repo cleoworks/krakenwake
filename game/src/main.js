@@ -15,6 +15,7 @@ import { drawCamp, campLayout } from './camp.js';
 import { drawDraft, draftLayout } from './draft.js';
 import { drawEnd } from './end.js';
 import { stageShot } from './shots.js';
+import { drawShotWorld } from './vendor/staging.js';
 
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -173,7 +174,7 @@ function frame(ts) {
       drawBriefing(ctx, shotState.difficulty, shotState.bestOverride, shotState.lastOverride, shotState.demoShot, view);
     } else if (shotState.mode === 'draft') { drawWorld(ctx, run, view); drawDraft(ctx, run, view); }
     else if (shotState.mode === 'end') { drawWorld(ctx, run, view); drawEnd(ctx, run, shotState.bestOverride); }
-    else { drawWorld(ctx, run, view); drawHUD(ctx, run, view); }
+    else { drawShotWorld(ctx, run, view); drawHUD(ctx, run, view); }
     return;
   }
 

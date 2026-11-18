@@ -1,6 +1,7 @@
 // shots.js — one job: the staged ?shot=NAME states the four screenshots
 // are taken from. Each is a real run object, frozen mid-moment.
 import { createRun } from './state.js';
+import { stageCoverFx } from './vendor/staging.js';
 
 function markCaught(r, list) {
   list.forEach(([i, count]) => {
@@ -28,7 +29,7 @@ export function stageShot(name, view, burst) {
     r.nightStats = { hauls: 5, snaps: 1, coins: 1303, score: 1490 };
     markCaught(r, CAUGHT_9);
     r.phase = 'fight';
-    r.castDist = 73;
+    r.castDist = 60;
     r.surgeCharges = 1; r.surgeFill = 0.5;
     // frozen at THE VANISH: the wyrm's COIL SLAM is telegraphed and
     // rearing down at the spot the ninja just left — he is mid-dash
@@ -38,13 +39,13 @@ export function stageShot(name, view, burst) {
     // no VITAL tick (vitalFlash 0), and surgePhase puts surge01
     // under the THRASHING line, so the column stays quiet otherwise
     r.fight = {
-      mi: 12, dist: 73, tension: 63, t: 6.4, snapT: 0, surgePhase: 2.0, stamina: 46,
+      mi: 12, dist: 60, tension: 63, t: 6.4, snapT: 0, surgePhase: 2.0, stamina: 46,
       wpNext: 5, wpT: 0.9, wpFake: false, wpDx: 0.3, wpDy: 0.9,
-      evIn: 8, evCount: 1, event: { id: 'slam', phase: 'tele', t: 0.35 },
+      evIn: 8, evCount: 1, event: { id: 'slam', phase: 'tele', t: 0.22 },
       surgeT: 0, vitalAcc: 0, vitalFlash: 0, spikeT: 0, inkT: 0,
       dashT: 0.18, dashCd: 0.9, counterT: 1.6, vanishFlash: 0.6,
     };
-    burst(950, 436, 10, ['#dff2ff', '#9fd0ee', '#ffffff'], 170, 5);
+    stageCoverFx(view, r);
     return { r, mode: 'game' };
   }
   if (name === 'briefing') {

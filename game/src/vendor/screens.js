@@ -27,6 +27,17 @@ export function panelTexture(ctx, x, y, w, h) {
   ctx.stroke();
   ctx.fillStyle = 'rgba(220,242,255,0.05)';
   for (let i = 0; i < 30; i++) ctx.fillRect(x + hash(i, 64) * w, y + hash(i, 65) * h, 3, 2);
+  // fine grain over the field — hash-placed dust in the light, so
+  // the panel's dark is a texture, never a flat fill
+  ctx.fillStyle = 'rgba(230,242,252,0.05)';
+  for (let i = 0; i < 42; i++) ctx.fillRect(x + hash(i, 66) * w, y + hash(i, 67) * h, 1.6, 1.6);
+  // a breath of warm light pooled at the panel's top-left, as if a
+  // lamp burns just off-frame — flat ellipses, the light pass's
+  // language on every screen: lit, not flat-lit
+  ctx.fillStyle = 'rgba(255,190,100,0.05)';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.16, y + 26, w * 0.30, 44, 0, 0, 6.29); ctx.fill();
+  ctx.fillStyle = 'rgba(255,205,120,0.04)';
+  ctx.beginPath(); ctx.ellipse(x + w * 0.16, y + 22, w * 0.18, 26, 0, 0, 6.29); ctx.fill();
   ctx.fillStyle = 'rgba(255,185,46,0.045)';
   ctx.fillRect(x, y, w, 46);
   ctx.restore();
@@ -76,6 +87,14 @@ export function monsterChip(ctx, m, count, x, y, w) {
   ctx.stroke();
   if (m.shape === 'wyrm') drawWyrmGlyph(ctx, x + 17, y + 12, 9, m.color, '#0b1420');
   else drawFishShape(ctx, m.shape, x + 17, y + 11, 9, m.color, '#0b1420');
+  if (caught) {
+    // the haul glitters: two small sparks struck off the count —
+    // the coins in the night's pile catching the lantern light
+    ctx.fillStyle = 'rgba(255,233,168,0.85)';
+    const sx = x + w - 48, sy = y + 8;
+    ctx.fillRect(sx - 3, sy - 0.8, 6, 1.6); ctx.fillRect(sx - 0.8, sy - 3, 1.6, 6);
+    ctx.fillRect(x + w - 60, y + 15.2, 3.4, 1.2); ctx.fillRect(x + w - 59.1, y + 14.1, 1.2, 3.4);
+  }
   text(ctx, m.name, x + 32, y + 17, 14, caught ? '#cfe8ff' : '#5f7d99', 'left', 400);
   text(ctx, `×${count}`, x + w - 10, y + 17, 14, caught ? '#ffd94d' : '#46617c', 'right', 800);
 }
