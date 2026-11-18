@@ -5,7 +5,7 @@ import { MONSTERS, SEAS, WEATHERS, BOONS, SEASON_NIGHTS, NIGHT_SECONDS, DIFFICUL
 import { journalCount } from './state.js';
 import { staminaWord, snapPoint } from './fight.js';
 import { lurePos, WATER_Y } from './render.js';
-import { drawHuntPanels } from './panels.js';
+import { drawHuntPanels, lurkH } from './panels.js';
 
 const F = (px, w = 700) => `${w} ${px}px system-ui, 'Segoe UI', sans-serif`;
 export function rr(ctx, x, y, w, h, r) {
@@ -83,16 +83,13 @@ function drawBoonPips(ctx, run, x, y, withLabel = true) {
 }
 
 export function drawHUD(ctx, run, view) {
-  // ONE compact panel at the top-left corner holds the run's vitals —
-  // coin, combo, score, night, level, bestiary in a two-column grid,
-  // and the BOONS pips as a fourth row when any are held: then the
-  // panel stretches a row taller, tightens its spacing and rides 4px
-  // up, so its base (y136) still clears the Blood Moon (top y≈141).
-  // The rest of the top edge is open sky but for the location chip;
-  // the goal rides as a chip at the bottom-left, above the fight strip.
+  // ONE panel at the top-left holds the whole left column: the run's
+  // vitals in a two-column grid (BOONS pips as a fourth row when any
+  // are held), then a hairline, then STILL LURKING below it — one box,
+  // one silhouette. The goal rides as a chip above the fight strip.
   const hasB = run.boons.length > 0;
   const top = hasB ? 10 : 14, r1 = hasB ? 44 : 48, r2 = hasB ? 74 : 78, r3 = hasB ? 102 : 106;
-  panel(ctx, 16, top, 296, hasB ? 126 : 102, 0.78);
+  panel(ctx, 16, top, 296, (hasB ? 126 : 102) + 8 + lurkH(run), 0.8);
   text(ctx, `🪙 ${run.coins}`, 32, r1, 23, '#ffd94d');
   const comboScale = view.comboPop > 0 ? 1 + 0.45 * view.comboPop : 1;
   ctx.save();
@@ -122,10 +119,11 @@ export function drawHUD(ctx, run, view) {
   cell(180, r3, 'BESTIARY', `${journalCount(run)}/13`, '#ffe9a8');
   const goalStr = `GOAL: Fill the bestiary — kill the King Wyrm — ${journalCount(run)}/13`;
   ctx.font = F(20);
-  panel(ctx, 16, 598, ctx.measureText(goalStr).width + 32, 36, 0.66);
-  text(ctx, goalStr, 32, 622, 20, '#ffe9a8');
+  panel(ctx, 16, 594, ctx.measureText(goalStr).width + 32, 36, 0.66);
+  text(ctx, goalStr, 32, 618, 20, '#ffe9a8');
   const locStr = `${SEAS[run.sea].name} • ${WEATHERS[run.weatherIdx].name}`;
   const locW = ctx.measureText(locStr).width + 32;
+  view.haulW = Math.max(224, locW);
   panel(ctx, 1264 - locW, 14, locW, 36, 0.66);
   text(ctx, locStr, 1248, 38, 20, '#aee6ff', 'right');
   drawBoonPips(ctx, run, 32, 108); // the panel's fourth row (no-op when no boons are held)
@@ -171,7 +169,6 @@ export function drawHUD(ctx, run, view) {
     rr(ctx, 32, 668, 560 * Math.max(0, f.stamina / 100), 9, 4);
     ctx.fill();
     if (f.surgeT > 0) text(ctx, 'CHAIN SURGING!', 640, 660, 14, '#ffb52e', 'center', 800);
-    else text(ctx, 'HOLD to haul in — release to slacken', 640, 660, 13, '#cfe8ff', 'center', 400);
     text(ctx, 'TENSION', 800, 660, 12, '#8fb8d4', 'left', 800);
     const snapAt = snapPoint(run);
     const zx = (t) => 800 + (t / snapAt) * 320;
@@ -204,7 +201,6 @@ export function drawHUD(ctx, run, view) {
   } else {
     text(ctx, 'HOLD SPACE to charge your throw', 640, 640, 24, '#8fb8d4', 'center');
   }
-  text(ctx, 'SPACE hold/release: throw • strike • haul    Shift/J: Dash    F: Chain Surge    S: Camp (shop + bestiary)    R: restart', 640, 706, 19, '#7fa6c4', 'center', 400);
   drawHuntPanels(ctx, run, view);
 }
 
