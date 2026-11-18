@@ -105,6 +105,7 @@ export function drawSkyExtras(ctx, run, t) {
     ctx.fillRect(hx + 2.5 + hash(i, 74) * 4, hy - hh + 2.5, 1.8, 2.2);
     if (hash(i, 75) > 0.45) ctx.fillRect(hx + hw - 4.5, hy - hh + 2.5, 1.8, 2.2);
   }
+  drawSkyGrain(ctx, bloodMoon);
   // a low flock skimming the water far out, left of the callouts —
   // silhouette strokes, the same language as the horizon flock
   ctx.strokeStyle = 'rgba(10,18,32,0.8)';
@@ -287,8 +288,35 @@ function drawRay(ctx, t) {
   ctx.stroke();
 }
 
+// --- the grain: tonal bands over the flat deep, dust over the sky ---
+// The sea and sky are painted, not poured: broad soft bands turn in
+// the deep water (the moon's road already carries its own glint
+// flecks, drawDeepSwell's language), and a hash-placed grain of
+// one-pixel specks rides the sky — sparse in the dark, denser in
+// the moon's own glow, where the light would catch the dust.
+function drawGrainField(ctx, run, t) {
+  ctx.fillStyle = 'rgba(26,58,92,0.07)';
+  ctx.beginPath(); ctx.ellipse(640, WATER_Y + 52, 760, 34, 0, 0, 6.29); ctx.fill();
+  ctx.fillStyle = 'rgba(2,6,12,0.11)';
+  ctx.beginPath(); ctx.ellipse(430, WATER_Y + 148, 700, 44, 0, 0, 6.29); ctx.fill();
+}
+
+function drawSkyGrain(ctx, bloodMoon) {
+  for (let i = 0; i < 14; i++) {
+    const x = hash(i, 151) * 1280, y = 6 + hash(i, 152) * (WATER_Y - 70);
+    ctx.fillStyle = hash(i, 153) > 0.7 ? 'rgba(2,5,10,0.16)' : 'rgba(205,226,248,0.05)';
+    ctx.fillRect(x, y, 1.3, 1.3);
+  }
+  ctx.fillStyle = bloodMoon ? 'rgba(255,150,120,0.09)' : 'rgba(215,232,250,0.07)';
+  for (let i = 0; i < 8; i++) {
+    const a = hash(i, 154) * 6.29, r = 30 + hash(i, 155) * 130;
+    ctx.fillRect(MOON_X + Math.cos(a) * r, MOON_Y + Math.sin(a) * r * 0.8, 1.3, 1.3);
+  }
+}
+
 export function drawWaterLife(ctx, run, t) {
   drawDeepShapes(ctx);
+  drawGrainField(ctx, run, t);
   drawFoamAndSparkle(ctx, run, t);
   drawDeepSwell(ctx, run, t);
   drawFrenzy(ctx, t);

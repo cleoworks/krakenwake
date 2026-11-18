@@ -7,7 +7,7 @@ import { text, panel, rr } from './ui.js';
 import { drawWorld } from './render.js';
 import { drawFishShape } from './vendor/shapes.js';
 import { drawWyrmGlyph } from './vendor/wyrm.js';
-import { screenTexture } from './vendor/screens.js';
+import { screenTexture, drawCampShelf } from './vendor/screens.js';
 
 export function briefingLayout() {
   const diffs = DIFFICULTIES.map((d, i) => ({ idx: i, x: 40 + i * 410, y: 474, w: 380, h: 56 }));
@@ -34,14 +34,15 @@ function stepCard(ctx, x, n, title, lines, icon) {
 }
 
 function drawDemoWindow(ctx, demo, view) {
-  const { x, y, w, h } = { x: 800, y: 548, w: 440, h: 140 };
+  const { x, y, w, h } = { x: 800, y: 548, w: 440, h: 96 };
   ctx.save();
   rr(ctx, x, y, w, h, 10);
   ctx.clip();
   // frame the action: the slice from the moon's sky down through the
-  // waterline, where the hunt in the window is actually happening
+  // waterline — the window is shallower now (the camp shelf took the
+  // bottom band), so the slice starts lower, still moon and water
   const s = w / 1280;
-  ctx.translate(x, y - 100 * s);
+  ctx.translate(x, y - 155 * s);
   ctx.scale(s, s);
   drawWorld(ctx, demo, view, true); // lite: at this size the fine scenery is mush
   ctx.restore();
@@ -143,19 +144,20 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
     text(ctx, `[${d.idx + 1}]`, d.x + d.w - 16, d.y + 26, 15, '#5f7d99', 'right', 400);
   }
 
-  // BEST panel + the last hunt, bottom left
-  panel(ctx, 40, 548, 470, 140, 0.8);
-  text(ctx, 'BEST HUNT', 60, 578, 17, '#8fb8d4', 'left', 800);
+  // BEST panel + the last hunt, bottom left — tightened leading
+  // for the camp shelf below
+  panel(ctx, 40, 548, 470, 96, 0.8);
+  text(ctx, 'BEST HUNT', 60, 572, 17, '#8fb8d4', 'left', 800);
   if (best && best.result) {
-    text(ctx, `${best.result} — GRADE ${best.grade || '—'} • SCORE ${best.score || 0}`, 60, 606, 18.5, '#ffe9a8');
-    text(ctx, `best combo ×${best.combo} • ${best.coins} 🪙 earned`, 60, 632, 16.5, '#cfe8ff', 'left', 400);
+    text(ctx, `${best.result} — GRADE ${best.grade || '—'} • SCORE ${best.score || 0}`, 60, 594, 18.5, '#ffe9a8');
+    text(ctx, `best combo ×${best.combo} • ${best.coins} 🪙 earned`, 60, 614, 16.5, '#cfe8ff', 'left', 400);
   } else {
-    text(ctx, 'No hunts yet — the bestiary is unwritten.', 60, 606, 17, '#cfe8ff', 'left', 400);
+    text(ctx, 'No hunts yet — the bestiary is unwritten.', 60, 594, 17, '#cfe8ff', 'left', 400);
   }
   if (last && last.result) {
-    text(ctx, `LAST HUNT: ${last.result} • ${last.species}/13 • score ${last.score} • grade ${last.grade}`, 60, 664, 14.5, '#8fb8d4', 'left', 400);
+    text(ctx, `LAST HUNT: ${last.result} • ${last.species}/13 • score ${last.score} • grade ${last.grade}`, 60, 636, 14.5, '#8fb8d4', 'left', 400);
   } else {
-    text(ctx, 'LAST HUNT: —', 60, 664, 15.5, '#5f7d99', 'left', 400);
+    text(ctx, 'LAST HUNT: —', 60, 636, 15.5, '#5f7d99', 'left', 400);
   }
 
   // the SAIL button
@@ -170,4 +172,8 @@ export function drawBriefing(ctx, sel, best, last, demo, view) {
   text(ctx, 'ENTER / SPACE / click', sail.x + sail.w / 2, sail.y + 88, 14, '#8fb8d4', 'center', 400);
 
   drawDemoWindow(ctx, demo, view);
+
+  // the camp shelf along the bottom: the arsenal, priced from the
+  // game's own tables (vendor/screens.js)
+  drawCampShelf(ctx);
 }

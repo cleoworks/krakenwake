@@ -2,8 +2,8 @@
 // Panel grain, stat tiles, haul chips, feat rows, draft pips and the
 // next-night line — pure render helpers, so the screens themselves stay
 // lean. Everything placed from fixed hashes: every frame agrees.
-import { MONSTERS, SEAS } from '../data.js';
-import { text, rr } from '../ui.js';
+import { MONSTERS, SEAS, HARPOONS, LURES } from '../data.js';
+import { text, rr, panel } from '../ui.js';
 import { drawFishShape } from './shapes.js';
 import { drawWyrmGlyph } from './wyrm.js';
 
@@ -150,4 +150,85 @@ export function nextNightText(run) {
   const lurking = MONSTERS.map((m, i) => (m.sea === seaIdx && run.bestiary[i].count === 0 ? m.name : null)).filter(Boolean);
   const tail = lurking.length ? `still lurking: ${lurking.slice(0, 4).join(' • ')}` : 'the sea is emptied — sail on';
   return { label: `NEXT — NIGHT ${n + 1}`, line: `${SEAS[seaIdx].name} — ${tail}` };
+}
+
+// --- the briefing's camp shelf: the outfitter's arsenal on one strip ---
+// The camp is a real system the briefing never showed — three
+// harpoons, four baits, every name and price the game's own tables
+// carry. One panel, seven chips, each chip an icon, the goods' name
+// and its price in coin — a shop shelf, not a footnote.
+function shelfIcon(ctx, kind, idx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
+  if (kind === 'h') { // a harpoon on the throw diagonal, barbed head,
+    // in its tier's own metal — wood, iron, wyrmbone
+    ctx.strokeStyle = ['#c9a06a', '#aebfd4', '#f3e2b3'][idx];
+    ctx.beginPath(); ctx.moveTo(-6, 6); ctx.lineTo(3.4, -3.4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(3.4, -3.4); ctx.lineTo(7, -7); ctx.lineTo(3.2, -6.2);
+    ctx.moveTo(7, -7); ctx.lineTo(6.2, -3.2); ctx.stroke();
+    if (idx === 1) { ctx.beginPath(); ctx.arc(-2.6, 2.6, 2.4, 0, 6.29); ctx.stroke(); } // the Ironcoil's coil
+  } else if (idx === 0) { // the Bait Bucket
+    ctx.fillStyle = '#a97c50';
+    ctx.beginPath(); ctx.moveTo(-5.5, -3); ctx.lineTo(5.5, -3); ctx.lineTo(4.2, 6); ctx.lineTo(-4.2, 6); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#e8d9b0';
+    ctx.beginPath(); ctx.arc(0, -3, 5.5, 3.14, 6.29); ctx.stroke();
+  } else if (idx === 1) { // the Blood Vial
+    ctx.fillStyle = '#e84a5a';
+    ctx.beginPath(); ctx.arc(0, 2.6, 3.9, 0, 6.29); ctx.fill();
+    ctx.fillRect(-1.3, -6.2, 2.6, 5.4);
+    ctx.fillStyle = '#e8d9b0'; ctx.fillRect(-2, -7.4, 4, 1.8);
+  } else if (idx === 2) { // the Lantern Squid: a lit orb on tentacles
+    ctx.fillStyle = 'rgba(255,207,110,0.25)';
+    ctx.beginPath(); ctx.arc(0, -1.6, 6.4, 0, 6.29); ctx.fill();
+    ctx.fillStyle = '#ffcf6e';
+    ctx.beginPath(); ctx.arc(0, -1.6, 3.1, 0, 6.29); ctx.fill();
+    ctx.strokeStyle = '#e8a37c';
+    for (const dx of [-3.4, 0, 3.4]) {
+      ctx.beginPath(); ctx.moveTo(dx, 1.2); ctx.quadraticCurveTo(dx + 1.2, 4.4, dx, 6.8); ctx.stroke();
+    }
+  } else { // the Doom Bell
+    ctx.fillStyle = '#ffb52e';
+    ctx.beginPath(); ctx.arc(0, 0.6, 5.2, 3.14, 6.29); ctx.fill();
+    ctx.fillRect(-6.4, 0.6, 12.8, 2.2);
+    ctx.beginPath(); ctx.arc(0, 4.8, 1.7, 0, 6.29); ctx.fill();
+    ctx.fillRect(-1, -6.6, 2, 2.2);
+  }
+  ctx.restore();
+}
+
+export function drawCampShelf(ctx) {
+  panel(ctx, 40, 662, 1200, 40, 0.8);
+  text(ctx, 'THE CAMP', 60, 688, 15, '#8fb8d4', 'left', 800);
+  const items = [
+    ...HARPOONS.map((it, i) => ({ kind: 'h', idx: i, name: it.name, price: it.price })),
+    ...LURES.map((it, i) => ({ kind: 'l', idx: i, name: it.name, price: it.price })),
+  ];
+  // measure first, then centre the row in the panel's open field —
+  // every chip exactly as wide as its goods need, no more. The price
+  // is a drawn coin, not an emoji: one gold disc, struck once per
+  // chip, reads cleaner and costs the PNG a fraction of the glyph.
+  const chips = items.map((it) => {
+    ctx.font = "700 11px system-ui, 'Segoe UI', sans-serif";
+    const nw = ctx.measureText(it.name).width;
+    const pw = ctx.measureText(`${it.price}`).width;
+    return { ...it, w: 50 + nw + pw };
+  });
+  const rowW = chips.reduce((a, c) => a + c.w, 0) + 6 * 6 + 12; // the wider gap divides harpoons from baits
+  let x = 150 + Math.max(0, (1074 - rowW) / 2);
+  chips.forEach((it, i) => {
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    rr(ctx, x, 669, it.w, 26, 7);
+    ctx.fill();
+    shelfIcon(ctx, it.kind, it.idx, x + 13, 682);
+    text(ctx, it.name, x + 25, 686.5, 11, '#eaf6ff', 'left', 700);
+    text(ctx, `${it.price}`, x + it.w - 8, 686.5, 11, '#ffb52e', 'right', 700);
+    ctx.fillStyle = '#ffb52e';
+    ctx.beginPath(); ctx.arc(x + it.w - 15 - ctx.measureText(`${it.price}`).width, 682, 5.2, 0, 6.29); ctx.fill();
+    ctx.strokeStyle = 'rgba(146,96,20,0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(x + it.w - 15 - ctx.measureText(`${it.price}`).width, 682, 2.9, 0, 6.29); ctx.stroke();
+    x += it.w + (i === 2 ? 18 : 6);
+  });
 }
